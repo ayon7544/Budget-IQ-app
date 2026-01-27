@@ -97,6 +97,7 @@ const Otp = () => {
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
     >
       <SafeAreaView style={styles.container}>
+<View style={styles.content}>
         <BackButton style={styles.backButton} />
         <Text style={styles.title}>OTP</Text>
         <Text style={styles.subTitle}>
@@ -145,6 +146,7 @@ const Otp = () => {
             </Text>
           </TouchableOpacity>
         </View>
+        </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -154,13 +156,16 @@ export default Otp;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#ffff",
-    padding: 20,
-    paddingTop: 20,
-    alignContent: "center",
-    justifyContent: "center",
-  },
+  flex: 1,
+  backgroundColor: "#fff",
+  padding: 20, // ✅ works now
+},
+
+content: {
+  flex: 1,
+  justifyContent: "center", // center content
+  paddingHorizontal:24
+},
   title: {
     fontSize: 25,
     fontWeight: "bold",

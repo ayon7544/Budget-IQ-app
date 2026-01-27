@@ -1,7 +1,6 @@
 import React from "react";
 import { StatusBar } from "react-native";
 import SplashScreenComponent from "./SplashScreen";
-import Toast from "react-native-toast-message"; // Import Toast
 
 export default function App() {
   return (
@@ -14,7 +13,7 @@ export default function App() {
       <SplashScreenComponent />
 
       {/* Toast component to render the toast messages */}
-      <Toast />
+    
     </>
   );
 }

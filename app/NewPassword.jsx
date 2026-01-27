@@ -76,81 +76,86 @@ const NewPassword = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
-      <SafeAreaView style={styles.container}>
-        <BackButton style={styles.backButton} />
-        <Text style={styles.title}>New Password</Text>
-        <Text style={styles.subTitle}>Please enter your new password</Text>
+<KeyboardAvoidingView
+  style={{ flex: 1 }}
+  behavior={Platform.OS === "ios" ? "padding" : "height"}
+  keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+>
+  <SafeAreaView style={styles.container}>
+    {/* Back Button */}
+    <BackButton style={styles.backButton} />
 
-        {/* Password Input */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.passwordWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="********"
-              placeholderTextColor="#888"
-              secureTextEntry={!showPassword}
-              value={newPassword}
-              onChangeText={setNewPassword}
+    <View style={styles.content}>
+      {/* Title */}
+      <Text style={styles.title}>New Password</Text>
+      <Text style={styles.subTitle}>Please enter your new password</Text>
+
+      {/* Password Input */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Password</Text>
+        <View style={styles.passwordWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="********"
+            placeholderTextColor="#888"
+            secureTextEntry={!showPassword}
+            value={newPassword}
+            onChangeText={setNewPassword}
+          />
+          <Pressable
+            style={styles.eyeIcon}
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            <Ionicons
+              name={showPassword ? "eye" : "eye-off"}
+              size={24}
+              color={Colors.primary}
             />
-            <Pressable
-              style={styles.eyeIcon}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Ionicons
-                name={showPassword ? "eye" : "eye-off"}
-                size={24}
-                color={Colors.primary}
-              />
-            </Pressable>
-          </View>
+          </Pressable>
         </View>
+      </View>
 
-        {/* Confirm Password Input */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Confirm Password</Text>
-          <View style={styles.passwordWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="********"
-              placeholderTextColor="#888"
-              secureTextEntry={!showConfirmPassword}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
+      {/* Confirm Password Input */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Confirm Password</Text>
+        <View style={styles.passwordWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="********"
+            placeholderTextColor="#888"
+            secureTextEntry={!showConfirmPassword}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+          <Pressable
+            style={styles.eyeIcon}
+            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          >
+            <Ionicons
+              name={showConfirmPassword ? "eye" : "eye-off"}
+              size={24}
+              color={Colors.primary}
             />
-            <Pressable
-              style={styles.eyeIcon}
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-            >
-              <Ionicons
-                name={showConfirmPassword ? "eye" : "eye-off"}
-                size={24}
-                color={Colors.primary}
-              />
-            </Pressable>
-          </View>
+          </Pressable>
         </View>
+      </View>
 
-        {/* Update Button */}
-        <TouchableOpacity
-          style={[
-            styles.verifyButton,
-            (isLoading || !newPassword) && { opacity: 0.6 },
-          ]}
-          onPress={handleNext}
-          disabled={isLoading || !newPassword}
-        >
-          <Text style={styles.verifyText}>
-            {isLoading ? "Updating..." : "Update"}
-          </Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+      {/* Update Button */}
+      <TouchableOpacity
+        style={[
+          styles.verifyButton,
+          (isLoading || !newPassword) && { opacity: 0.6 },
+        ]}
+        onPress={handleNext}
+        disabled={isLoading || !newPassword}
+      >
+        <Text style={styles.verifyText}>
+          {isLoading ? "Updating..." : "Update"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  </SafeAreaView>
+</KeyboardAvoidingView>
   );
 };
 
@@ -160,10 +165,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    padding: 20,
-    paddingTop: 20,
     justifyContent: "center",
   },
+content: {
+  paddingHorizontal:24
+},
   title: {
     fontSize: 25,
     fontWeight: "bold",
