@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons"; // ✅ make sure to install expo/
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import BackButton from "../components/UI/BackButton";
 import { Colors } from "../Constants/Colors";
@@ -29,11 +29,26 @@ const NewPassword = () => {
 
   const handleNext = async () => {
     if (!newPassword) {
-      Alert.alert("Error", "Password cannot be empty");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Error",
+        text2: "Password cannot be empty",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
+
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Error",
+        text2: "Passwords do not match",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
@@ -47,7 +62,14 @@ const NewPassword = () => {
 
       router.replace("/LoginScreen");
     } catch (e) {
-      Alert.alert("Error", e?.data?.message || "Something went wrong");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Error",
+        text2: e?.data?.message || "Something went wrong",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
     } finally {
       setIsLoading(false);
     }

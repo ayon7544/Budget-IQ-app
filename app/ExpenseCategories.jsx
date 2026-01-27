@@ -11,6 +11,7 @@ import {
   StatusBar,
   Platform,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import RemoteSvg from "../components/RemoteSvg";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useGetAllCategoriesQuery } from "../redux/services/api";
@@ -20,6 +21,29 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+const CategorySkeleton = () => {
+  // Create an array of 10 items to fill the screen
+  const placeholders = Array.from({ length: 10 });
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={{ paddingHorizontal: 16 }}>
+        {placeholders.map((_, index) => (
+          <View key={index} style={styles.skeletonItem}>
+            {/* Mimics iconContainer */}
+            <View style={styles.skeletonIcon} />
+
+            {/* Mimics label */}
+            <View style={styles.skeletonText} />
+
+            {/* Mimics checkbox */}
+            <View style={styles.skeletonCheckbox} />
+          </View>
+        ))}
+      </View>
+    </SafeAreaView>
+  );
+};
 const ExpensesCategories = () => {
   const insets = useSafeAreaInsets();
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -39,12 +63,12 @@ const ExpensesCategories = () => {
       if (expenseCategories?.result?.length) {
         try {
           const storedCategories = await SecureStore.getItemAsync(
-            "selectedExpenseCategories"
+            "selectedExpenseCategories",
           );
           if (storedCategories) {
             const storedIds = JSON.parse(storedCategories);
             const validIds = storedIds.filter((id) =>
-              expenseCategories.result.some((cat) => cat._id === id)
+              expenseCategories.result.some((cat) => cat._id === id),
             );
             setSelectedCategories(validIds);
           }
@@ -57,7 +81,7 @@ const ExpensesCategories = () => {
 
   const toggleCategory = (id) => {
     setSelectedCategories((prev) =>
-      prev.includes(id) ? prev.filter((cat) => cat !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((cat) => cat !== id) : [...prev, id],
     );
   };
 
@@ -65,14 +89,21 @@ const ExpensesCategories = () => {
 
   const handleSave = async () => {
     if (selectedCategories.length === 0) {
-      alert("Please select at least one category.");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Error",
+        text2: "Please select at least one category.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
     try {
       await SecureStore.setItemAsync(
         "selectedExpenseCategories",
-        JSON.stringify(selectedCategories)
+        JSON.stringify(selectedCategories),
       );
       router.push("/DashboardScreen");
     } catch {}
@@ -104,11 +135,7 @@ const ExpensesCategories = () => {
   );
 
   if (isLoading || !apiLoaded) {
-    return (
-      <View style={styles.centeredContainer}>
-        <ActivityIndicator size="large" color="#20a074" />
-      </View>
-    );
+    return <CategorySkeleton />;
   }
 
   if (isError || !expenseCategories?.result?.length) {
@@ -186,4 +213,31 @@ const styles = StyleSheet.create({
     right: 16,
   },
   saveText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  skeletonItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomColor: "#eee",
+    borderBottomWidth: 1,
+  },
+  skeletonIcon: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#efefef", // Light grey
+    borderRadius: 10,
+    marginRight: 14,
+  },
+  skeletonText: {
+    flex: 1,
+    height: 14,
+    backgroundColor: "#efefef",
+    borderRadius: 4,
+    marginRight: 40, // Leave space for the checkbox
+  },
+  skeletonCheckbox: {
+    width: 24,
+    height: 24,
+    backgroundColor: "#efefef",
+    borderRadius: 4,
+  },
 });

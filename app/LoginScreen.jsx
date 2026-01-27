@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   Image,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Platform } from "react-native";
 import { KeyboardAvoidingView } from "react-native";
@@ -73,11 +73,32 @@ const LoginScreen = () => {
       const message = error?.data?.message || "Something went wrong";
 
       if (statusCode === 404) {
-        Alert.alert("Login Failed", "User not found. Please check your email.");
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Login Failed",
+          text2: "User not found. Please check your email.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } else if (statusCode === 401) {
-        Alert.alert("Login Failed", "Incorrect password. Please try again.");
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Login Failed",
+          text2: "Incorrect password. Please try again.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } else {
-        Alert.alert("Error", message);
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Error",
+          text2: message,
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       }
     }
   };

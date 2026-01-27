@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { Avatar } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
@@ -121,7 +122,7 @@ const SettingScreen = () => {
             },
           },
         ],
-        { cancelable: true }
+        { cancelable: true },
       );
       return;
     }
@@ -131,7 +132,14 @@ const SettingScreen = () => {
       if (!storedReview) {
         setIsReviewModalVisible(true);
       } else {
-        Alert.alert("You’ve already reviewed the app. Thank you!");
+        Toast.show({
+          type: "info",
+          position: "bottom",
+          text1: "You’ve already reviewed the app.",
+          text2: "Thank you for your feedback!",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       }
       return;
     }
@@ -145,13 +153,25 @@ const SettingScreen = () => {
     try {
       await doReview({ star: rating }).unwrap();
       await setReviewInfo({ hasReviewed: true });
-      Alert.alert(
-        "Thank you!",
-        `You rated us ${rating} star${rating > 1 ? "s" : ""}.`
-      );
-      setIsReviewModalVisible(false);
+      Toast.show({
+        type: "success",
+        position: "bottom",
+        text1: "Thank you!",
+        text2: `You rated us ${rating} star${rating > 1 ? "s" : ""}.`,
+        visibilityTime: 3000,
+        autoHide: true,
+      });
+
+      setIsReviewModalVisible(false); // Close the review modal
     } catch (error) {
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Error",
+        text2: "Something went wrong. Please try again.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
     }
   };
 

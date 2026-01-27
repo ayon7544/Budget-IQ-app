@@ -7,9 +7,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
- import { KeyboardAvoidingView, Platform } from "react-native";
+import Toast from "react-native-toast-message";
+import { KeyboardAvoidingView, Platform } from "react-native";
 
 import BackButton from "../components/UI/BackButton";
 import { Colors } from "../Constants/Colors";
@@ -26,14 +26,21 @@ const ForgotPassword = () => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const isEmailValid = emailRegex.test(email);
 
-const validateEmail = (text) => {
-  setEmail(text);
-  // no UI errors, just updates state
-};
+  const validateEmail = (text) => {
+    setEmail(text);
+    // no UI errors, just updates state
+  };
 
   const handleNext = async () => {
     if (!isEmailValid) {
-      Alert.alert("Validation Error", "Please enter a valid email address.");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Validation Error",
+        text2: "Please enter a valid email address.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
@@ -46,10 +53,14 @@ const validateEmail = (text) => {
         params: { email },
       });
     } catch (err) {
-      Alert.alert(
-        "Error",
-        err?.data?.message || "Something went wrong. Please try again."
-      );
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Error",
+        text2: err?.data?.message || "Something went wrong. Please try again.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -58,50 +69,47 @@ const validateEmail = (text) => {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-  style={{ flex: 1 }}
-  behavior={Platform.OS === "ios" ? "padding" : "height"}
-  keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
->
-
-
-
-      <BackButton style={styles.backButton} />
-      <View style={styles.content}>
-        <Text style={styles.title}>Forgot Password</Text>
-        <Text style={styles.subTitle}>
-          To reset your password, Please enter the email address that is
-          associated with the account. You’ll get the link in your e-mail.
-        </Text>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="consultme@gmail.com"
-            placeholderTextColor="#888"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={validateEmail}
-          />
-          {errors.email ? (
-            <Text style={styles.errorText}>{errors.email}</Text>
-          ) : null}
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.verifyButton,
-            (!isEmailValid || isLoading) && { opacity: 0.6 },
-          ]}
-          onPress={handleNext}
-          disabled={!isEmailValid || isLoading}
-        >
-          <Text style={styles.verifyText}>
-            {isLoading ? "Sending..." : "Send"}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      >
+        <BackButton style={styles.backButton} />
+        <View style={styles.content}>
+          <Text style={styles.title}>Forgot Password</Text>
+          <Text style={styles.subTitle}>
+            To reset your password, Please enter the email address that is
+            associated with the account. You’ll get the link in your e-mail.
           </Text>
-        </TouchableOpacity>
-      </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="consultme@gmail.com"
+              placeholderTextColor="#888"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={validateEmail}
+            />
+            {errors.email ? (
+              <Text style={styles.errorText}>{errors.email}</Text>
+            ) : null}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.verifyButton,
+              (!isEmailValid || isLoading) && { opacity: 0.6 },
+            ]}
+            onPress={handleNext}
+            disabled={!isEmailValid || isLoading}
+          >
+            <Text style={styles.verifyText}>
+              {isLoading ? "Sending..." : "Send"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

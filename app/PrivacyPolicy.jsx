@@ -7,6 +7,39 @@ import {
   Text,
   StatusBar,
 } from "react-native";
+const PolicySkeleton = () => {
+  const lines = Array.from({ length: 15 }); // Adjust number of lines based on screen height
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.scrollViewContent}>
+        {/* Title Placeholder */}
+        <View
+          style={[
+            styles.skeletonLine,
+            { width: "60%", height: 28, marginBottom: 20 },
+          ]}
+        />
+
+        {/* Body Text Placeholders */}
+        {lines.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.skeletonLine,
+              {
+                width:
+                  index % 3 === 0 ? "90%" : index % 2 === 0 ? "100%" : "75%",
+                marginBottom: 12,
+                marginTop: index % 5 === 0 ? 15 : 0, // Create "paragraph" spacing
+              },
+            ]}
+          />
+        ))}
+      </View>
+    </SafeAreaView>
+  );
+};
 import { useGetPrivacyPolicyQuery } from "../redux/services/api";
 import RenderHTML from "react-native-render-html";
 import {
@@ -19,12 +52,9 @@ const PrivacyPolicy = () => {
   const insets = useSafeAreaInsets(); // get safe area insets dynamically
   const { data, isLoading, error } = useGetPrivacyPolicyQuery();
 
+  // Replace this block
   if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#20a074" />
-      </View>
-    );
+    return <PolicySkeleton />;
   }
 
   if (error || !data?.success) {
@@ -83,7 +113,7 @@ const PrivacyPolicy = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea]} >
+    <SafeAreaView style={[styles.safeArea]}>
       {/* Make StatusBar non-translucent so SafeAreaView works correctly */}
       <StatusBar
         translucent={false}
@@ -92,7 +122,6 @@ const PrivacyPolicy = () => {
       />
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
-
         <RenderHTML
           contentWidth={width}
           source={{ html: htmlContent }}
@@ -118,5 +147,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  skeletonLine: {
+    backgroundColor: "#f0f0f0",
+    height: 16,
+    borderRadius: 4,
   },
 });

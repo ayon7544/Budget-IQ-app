@@ -1,13 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { use, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { Colors } from "../Constants/Colors";
 import { useVerifyRegistrationMutation } from "../redux/services/api";
 import { useDispatch } from "react-redux";
@@ -59,7 +59,14 @@ const AccountVerification = () => {
 
   const handleResendOtp = async () => {
     if (!email) {
-      Alert.alert("Error", "Email is missing. Cannot resend OTP.");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Error",
+        text2: "Email is missing. Cannot resend OTP.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
@@ -68,20 +75,45 @@ const AccountVerification = () => {
 
     try {
       const response = await resentOtp({ email }).unwrap();
-      Alert.alert("Success", "A new OTP has been sent to your email.");
+      Toast.show({
+        type: "success",
+        position: "bottom",
+        text1: "Success",
+        text2: "A new OTP has been sent to your email.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
     } catch (e) {
       const statusCode = e?.status;
       const message = e?.data?.message || "Unable to resend OTP.";
 
       if (statusCode === 429) {
-        Alert.alert(
-          "Too Many Requests",
-          "Please wait before requesting again."
-        );
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Too Many Requests",
+          text2: "Please wait before requesting again.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } else if (statusCode === 500) {
-        Alert.alert("Server Error", "Please try again later.");
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Server Error",
+          text2: "Please try again later.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } else {
-        Alert.alert("Error", message);
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Error",
+          text2: message,
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       }
 
       // ✅ Allow user to retry after failure
@@ -91,17 +123,27 @@ const AccountVerification = () => {
 
   // Handle OTP verification and sign in
   const handleVerify = async () => {
-    // ✅ 1. Check if OTP is complete
     if (otp.join("").length < 6) {
-      Alert.alert("Invalid OTP", "Please enter the complete 6-digit code.");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Invalid OTP",
+        text2: "Please enter the complete 6-digit code.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
     if (!email || !password) {
-      Alert.alert(
-        "Missing Data",
-        "Email or password is missing. Please restart the process."
-      );
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Missing Data",
+        text2: "Email or password is missing. Please restart the process.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
@@ -121,7 +163,14 @@ const AccountVerification = () => {
           dispatch(setToken(token));
           router.replace("/LoginScreen");
         } else {
-          Alert.alert("Sign-in Error", "Token is missing. Please try again.");
+          Toast.show({
+            type: "error",
+            position: "bottom",
+            text1: "Sign-in Error",
+            text2: "Token is missing. Please try again.",
+            visibilityTime: 3000,
+            autoHide: true,
+          });
         }
       } catch (signInError) {
         const statusCode = signInError?.status;
@@ -129,23 +178,46 @@ const AccountVerification = () => {
           signInError?.data?.message || "Sign-in failed. Please try again.";
 
         if (statusCode === 401) {
-          Alert.alert("Authentication Failed", "Invalid credentials.");
+          Toast.show({
+            type: "error",
+            position: "bottom",
+            text1: "Authentication Failed",
+            text2: "Invalid credentials.",
+            visibilityTime: 3000,
+            autoHide: true,
+          });
         } else if (statusCode === 500) {
-          Alert.alert("Server Error", "Unable to sign in. Try again later.");
+          Toast.show({
+            type: "error",
+            position: "bottom",
+            text1: "Server Error",
+            text2: "Unable to sign in. Try again later.",
+            visibilityTime: 3000,
+            autoHide: true,
+          });
         } else {
-          Alert.alert("Error", message);
+          Toast.show({
+            type: "error",
+            position: "bottom",
+            text1: "Error",
+            text2: message,
+            visibilityTime: 3000,
+            autoHide: true,
+          });
         }
       }
     } catch (err) {
       const statusCode = err?.data?.err?.statusCode || err?.status || 500;
       const message = err?.data?.message || "Failed to verify OTP.";
 
-      Alert.alert(
-        "❌ Error", // Add emoji or custom title
-        message,
-        [{ text: "Cancel", style: "cancel" }],
-        { cancelable: true }
-      );
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "❌ Error", // Add emoji or custom title
+        text2: message,
+        visibilityTime: 3000,
+        autoHide: true,
+      });
     }
   };
 

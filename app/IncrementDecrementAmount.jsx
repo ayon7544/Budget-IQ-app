@@ -13,6 +13,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import RemoteSvg from "../components/RemoteSvg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../Constants/Colors";
@@ -22,6 +23,67 @@ import {
   useGetUpdateTransactionMutation,
 } from "../redux/services/api";
 
+const FormSkeleton = () => (
+  <SafeAreaView style={styles.container}>
+    {/* Header Skeleton */}
+    <View style={[styles.header, { backgroundColor: "#f0f0f0" }]}>
+      <View
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          backgroundColor: "#e0e0e0",
+        }}
+      />
+      <View style={{ flex: 1, alignItems: "center" }}>
+        <View
+          style={{
+            width: 120,
+            height: 20,
+            backgroundColor: "#e0e0e0",
+            borderRadius: 4,
+          }}
+        />
+      </View>
+    </View>
+
+    {/* Input Row Skeleton */}
+    <View style={[styles.row, { borderBottomWidth: 0 }]}>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View
+          style={{
+            width: 20,
+            height: 20,
+            backgroundColor: "#f0f0f0",
+            borderRadius: 4,
+          }}
+        />
+        <View
+          style={{
+            width: 80,
+            height: 16,
+            backgroundColor: "#f0f0f0",
+            borderRadius: 4,
+            marginLeft: 10,
+          }}
+        />
+      </View>
+      <View
+        style={{
+          width: 60,
+          height: 24,
+          backgroundColor: "#f0f0f0",
+          borderRadius: 4,
+        }}
+      />
+    </View>
+
+    {/* Button Skeleton */}
+    <View
+      style={[styles.button, { backgroundColor: "#f0f0f0", marginTop: "auto" }]}
+    />
+  </SafeAreaView>
+);
 const IncrementDecrementAmount = () => {
   const [updateTransaction] = useGetUpdateTransactionMutation();
   const [createTransactions] = useCreateTransactionMutation();
@@ -31,7 +93,7 @@ const IncrementDecrementAmount = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const { id, name, image, categoryType, transactionId, ammount, fromTab } =
     useLocalSearchParams();
-  const { data: user } = useUserGetMeQuery();
+  const { data: user, isLoading: userLoading } = useUserGetMeQuery();
   const userId = user?.data?._id;
 
   const formatDate = (d) =>
@@ -46,7 +108,14 @@ const IncrementDecrementAmount = () => {
   const handleTransaction = async () => {
     try {
       if (!amount || parseInt(amount) <= 0) {
-        alert("Amount must be greater than 0");
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Error",
+          text2: "Amount must be greater than 0",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
         return;
       }
 
@@ -72,7 +141,9 @@ const IncrementDecrementAmount = () => {
       console.error(error);
     }
   };
-
+  if (userLoading) {
+    return <FormSkeleton />;
+  }
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -209,5 +280,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     marginRight: 8,
+  },
+  skeletonPulse: {
+    backgroundColor: "#f2f2f2",
+    borderRadius: 4,
+  },
+  skeletonHeader: {
+    height: 60,
+    backgroundColor: "#f2f2f2",
+    borderRadius: 8,
+    marginBottom: 24,
+    width: "100%",
   },
 });

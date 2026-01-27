@@ -14,7 +14,7 @@ import { Colors } from "../Constants/Colors";
 import { useVerifyCodeMutation } from "../redux/services/api";
 import { useLocalSearchParams, useSearchParams } from "expo-router";
 import { useForgetPasswordMutation } from "../redux/services/api";
-import { Alert } from "react-native";
+import Toast from "react-native-toast-message";
 const Otp = () => {
   const [otp, setOtp] = useState(["", "", "", "", ""]);
   const [countdown, setCountdown] = useState(60);
@@ -57,10 +57,16 @@ const Otp = () => {
         params: { email: email, tokenCode: otp.join("") },
       });
     } catch (e) {
-      // Show alert for invalid code or other errors
       const errorMessage =
         e?.data?.message || "Invalid code. Please try again.";
-      Alert.alert("OTP Error", errorMessage);
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "OTP Error",
+        text2: errorMessage,
+        visibilityTime: 3000,
+        autoHide: true,
+      });
     }
   };
 

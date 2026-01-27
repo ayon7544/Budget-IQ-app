@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -18,6 +17,7 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 import { Colors } from "../Constants/Colors";
 import { useSignUpMutation } from "../redux/services/api";
 
@@ -107,20 +107,38 @@ const SignUpScreen = () => {
       !formData.password ||
       !formData.contactNo
     ) {
-      Alert.alert("Validation Error", "All fields are required.");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Validation Error",
+        text2: "All fields are required.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      Alert.alert("Validation Error", "Passwords do not match.");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Validation Error",
+        text2: "Passwords do not match.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
     if (formData.password.length < 6) {
-      Alert.alert(
-        "Weak Password",
-        "Password must be at least 6 characters long."
-      );
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Weak Password",
+        text2: "Password must be at least 6 characters long.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
@@ -132,7 +150,7 @@ const SignUpScreen = () => {
         contactNo: formData.contactNo.trim(),
         password: formData.password,
       }).unwrap();
-  
+
       // ✅ Save data securely
       await SecureStore.setItemAsync("userFullName", formData.fullName);
       await SecureStore.setItemAsync("userEmail", formData.email);
@@ -152,32 +170,59 @@ const SignUpScreen = () => {
       const serverMessage = err?.data?.message || "";
 
       if (statusCode === 400) {
-        Alert.alert(
-          "Sign Up Failed",
-          serverMessage || "Invalid input. Please check your data."
-        );
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Sign Up Failed",
+          text2: serverMessage || "Invalid input. Please check your data.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } else if (statusCode === 409) {
-        Alert.alert(
-          "Email Exists",
-          "An account with this email already exists. Please log in."
-        );
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Email Exists",
+          text2: "An account with this email already exists. Please log in.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } else if (statusCode === 422) {
-        Alert.alert(
-          "Validation Error",
-          "Please check your email and contact number."
-        );
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Validation Error",
+          text2: "Please check your email and contact number.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } else if (statusCode === 500) {
-        Alert.alert(
-          "Server Error",
-          "Something went wrong on our end. Please try again later."
-        );
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Server Error",
+          text2: "Something went wrong on our end. Please try again later.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } else if (err.name === "TypeError") {
-        Alert.alert("Network Error", "Please check your internet connection.");
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Network Error",
+          text2: "Please check your internet connection.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } else {
-        Alert.alert(
-          "Error",
-          serverMessage || "Sign Up failed. Please try again."
-        );
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Error",
+          text2: serverMessage || "Sign Up failed. Please try again.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       }
     }
   };

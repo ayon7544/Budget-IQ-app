@@ -6,8 +6,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { useState } from "react";
 import { useCurrencyMutation } from "../redux/services/api";
 import { router } from "expo-router";
@@ -45,12 +45,25 @@ const Currency = () => {
       }).unwrap();
 
       setSelectedCurrency(selected.code); // ✅ highlight selected
-      Alert.alert("Success", result.message);
+      Toast.show({
+        type: "success",
+        position: "bottom",
+        text1: "Success",
+        text2: result.message,
+        visibilityTime: 3000,
+        autoHide: true,
+      });
 
       router.push("/(tabs)");
     } catch (err) {
-    
-      Alert.alert("Error", "Something went wrong while setting currency");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Error",
+        text2: "Something went wrong while setting currency",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
     }
   };
 

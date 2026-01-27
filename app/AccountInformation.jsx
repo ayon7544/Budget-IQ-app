@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useEffect, useState } from "react";
+import Toast from "react-native-toast-message";
 import {
   Image,
   StyleSheet,
@@ -11,7 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
+
   StatusBar,
   KeyboardAvoidingView,
   Platform,
@@ -30,7 +31,7 @@ const compressImage = async (uri) => {
     const result = await ImageManipulator.manipulateAsync(
       uri,
       [{ resize: { width: 800 } }],
-      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG }
+      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG },
     );
     return result.uri;
   } catch {
@@ -65,7 +66,14 @@ const AccountInformation = () => {
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      alert("Permission to access camera roll is required!");
+      Toast.show({
+        type: "error",
+        position: "bottom",
+        text1: "Permission Denied",
+        text2: "Permission to access the camera roll is required!",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       return;
     }
 
@@ -95,7 +103,7 @@ const AccountInformation = () => {
       const formData = new FormData();
       formData.append(
         "data",
-        JSON.stringify({ fullName: finalName, email: finalEmail, contactNo })
+        JSON.stringify({ fullName: finalName, email: finalEmail, contactNo }),
       );
 
       if (image) {
@@ -131,7 +139,14 @@ const AccountInformation = () => {
       refetch();
       router.replace("/SettingScreen");
     } catch {
-      Alert.alert("Upload Failed", "Please try again or use a smaller image.");
+      Toast.show({
+        type: "error",
+        position: "bottom", 
+        text1: "Upload Failed", 
+        text2: "Please try again or use a smaller image.", 
+        visibilityTime: 3000, 
+        autoHide: true, 
+      });
     }
   };
 
