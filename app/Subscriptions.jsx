@@ -150,7 +150,7 @@ const Subscriptions = () => {
     try {
       const result = await triggerGetMessages().unwrap();
       dispatch(saveApiSuccess(result.success));
-    } catch (error) {}
+    } catch (error) { }
   };
 
   const handleBackFromWebView = () => {
@@ -232,6 +232,20 @@ const Subscriptions = () => {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Top Header Section */}
+      <View style={styles.header}>
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginPrompt}>Already have a subscription?</Text>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => router.push("/LoginScreen")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.loginButtonText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <Text style={styles.title}>Choose Your Plan</Text>
 
       <View style={styles.planContainer}>
@@ -388,5 +402,41 @@ const styles = StyleSheet.create({
   },
   planDetails: {
     padding: 12,
+  },
+  header: {
+    marginBottom: 30,
+    marginTop: 10,
+  },
+  loginContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0', // Subtle border
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  loginPrompt: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 8,
+  },
+  loginButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#1B9E6C', // Matching your brand color
+  },
+  loginButtonText: {
+    color: '#1B9E6C',
+    fontWeight: '700',
+    fontSize: 14,
   },
 });
