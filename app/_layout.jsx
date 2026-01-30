@@ -3,11 +3,22 @@ import { StatusBar } from "react-native";
 import { Provider } from "react-redux";
 import { store } from "../redux/store";
 import Toast from "react-native-toast-message"; // Import Toast
-
 import { LogBox } from "react-native";
-
+import Purchases from "react-native-purchases";
+import { useEffect } from "react";
+import { Platform } from "react-native";
 LogBox.ignoreAllLogs(true);
 export default function RootLayout() {
+    useEffect(() => {
+    const iosApiKey = "appl_YIVfXiFWPOITADwwdAynEOcIwgT";
+    const androidApiKey = "test_kWieknaelwLRaldyrYTIWSHfjlO";
+
+    if (Platform.OS === "ios") {
+      Purchases.configure({ apiKey: iosApiKey });
+    } else if (Platform.OS === "android") {
+      Purchases.configure({ apiKey: androidApiKey });
+    }
+  }, []);
   return (
     <Provider store={store}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" />

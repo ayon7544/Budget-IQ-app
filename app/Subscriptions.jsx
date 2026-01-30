@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -8,220 +8,199 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { WebView } from "react-native-webview";
-import { useDispatch } from "react-redux";
 import Toast from "react-native-toast-message";
-import {
-  useGetAllMemberShipPlanQuery,
-  useGetMembershipMutation,
-  useLazyGetMessageWithTotalTransactionQuery,
-} from "../redux/services/api";
-import { saveApiSuccess } from "../redux/slices/messageSlice";
+import Purchases from "react-native-purchases";
 
 const Subscriptions = () => {
-  const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch();
-  const { data: allPlans, isLoading: plansLoading } =
-    useGetAllMemberShipPlanQuery();
-  const [getMembership, { isLoading: membershipLoading }] =
-    useGetMembershipMutation();
-
-  const [triggerGetMessages, { data }] =
-    useLazyGetMessageWithTotalTransactionQuery();
-  const [textWidths, setTextWidths] = useState({});
-  const [checkoutUrl, setCheckoutUrl] = useState(null);
   const [processingPlan, setProcessingPlan] = useState(null);
+  const [offerings, setOfferings] = useState(null);
+  const [customerInfo, setCustomerInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const navigateWithCallback = (callback, delay = 1000) => {
-    const interval = setInterval(() => {
-      const ready = callback();
-      if (ready) {
-        clearInterval(interval);
-        router.push("Currency");
-      }
-    }, delay);
+  useEffect(() => {
+    initializeRevenueCat();
+  }, []);
+
+  const initializeRevenueCat = async () => {
+    try {
+      const offerings = await Purchases.getOfferings();
+      setOfferings(offerings);
+
+      const customerInfo = await Purchases.getCustomerInfo();
+      setCustomerInfo(customerInfo);
+
+      Purchases.addCustomerInfoUpdateListener((info) => {
+        setCustomerInfo(info);
+      });
+
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+    }
   };
 
-  const handleLayout = (name, width) => {
-    setTextWidths((prev) => ({ ...prev, [name]: width }));
-  };
-
-  const handleSubscription = async (plan) => {
+  const handlePurchase = async (packageIdentifier) => {
     if (processingPlan) return;
-    setProcessingPlan(plan.name);
 
     try {
-      if (!allPlans?.result || allPlans.result.length === 0) {
+      setProcessingPlan(packageIdentifier);
+
+      let rcPackage = null;
+
+      if (packageIdentifier === "monthly") {
+        rcPackage = offerings?.all?.Monthly?.monthly;
+      } else if (packageIdentifier === "yearly") {
+        rcPackage = offerings?.all?.Yearly?.annual;
+      }
+
+      if (!rcPackage) {
         Toast.show({
           type: "error",
           position: "bottom",
           text1: "Error",
-          text2: "No membership plans available. Please try again later.",
+          text2: "Subscription package not found.",
           visibilityTime: 3000,
           autoHide: true,
         });
         return;
       }
 
-      const matchedPlan = allPlans.result.find(
-        (p) => p.name.toLowerCase() === plan.name.toLowerCase(),
-      );
 
-      if (!matchedPlan) {
-        Toast.show({
-          type: "error",
-          position: "bottom",
-          text1: "Error",
-          text2: `The plan "${plan.name}" was not found. Please try again.`,
-          visibilityTime: 3000,
-          autoHide: true,
-        });
+      const { customerInfo: purchaseInfo } =
+        await Purchases.purchasePackage(rcPackage);
 
-        return;
-      }
 
-      const selectedPlanId = matchedPlan._id;
-      const response = await getMembership(selectedPlanId).unwrap();
+      // Check for active entitlements
+      const activePremium = purchaseInfo.entitlements.active["premium"];
+      const activeStandard = purchaseInfo.entitlements.active["standard"];
 
-      if (!response || !response.result) {
-        Toast.show({
-          type: "error",
-          position: "bottom",
-          text1: "Error",
-          text2: "Failed to fetch membership details. Please try again.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
+      if (activePremium || activeStandard) {
+        const entitlementName = activePremium ? "Premium" : "Standard";
+        const entitlement = activePremium || activeStandard;
 
-        return;
-      }
-
-      await runAnotherAsyncFunction();
-
-      if (plan.name.toLowerCase() === "free-trial") {
         Toast.show({
           type: "success",
           position: "bottom",
           text1: "Success",
-          text2: `Subscribed to the ${plan.name} plan successfully!`,
+          text2: `${entitlementName} Access activated!`,
           visibilityTime: 3000,
           autoHide: true,
         });
 
+        // Navigate to next screen
         setTimeout(() => {
-          navigateWithCallback(() => true, 1000); // Navigate after a short delay
-        }, 1000);
+          router.push("Currency");
+        }, 1500);
       } else {
-        const checkoutUrl = response.result?.url;
-        if (checkoutUrl) {
-          setCheckoutUrl(checkoutUrl);
-        } else {
+        // Fallback if entitlements aren't configured properly
+        const hasActiveSubscription =
+          purchaseInfo.activeSubscriptions.length > 0;
+
+        if (hasActiveSubscription) {
           Toast.show({
-            type: "error",
+            type: "success",
             position: "bottom",
-            text1: "Error",
-            text2: "Checkout URL not found. Please try again.",
+            text1: "Purchase Complete",
+            text2: "Subscription active!",
             visibilityTime: 3000,
             autoHide: true,
           });
+
+          setTimeout(() => {
+            router.push("Currency");
+          }, 1500);
         }
       }
-    } catch (err) {
-      const errorMessage =
-        err?.data?.message ||
-        err?.message ||
-        "An error occurred while processing your subscription. Please try again.";
+    } catch (error) {
+      if (error.userCancelled) {
+
+        Toast.show({
+          type: "info",
+          position: "bottom",
+          text1: "Cancelled",
+          text2: "Purchase was cancelled.",
+          visibilityTime: 2000,
+          autoHide: true,
+        });
+      } else {
+        Toast.show({
+          type: "error",
+          position: "bottom",
+          text1: "Purchase Failed",
+          text2: error.message || "An error occurred during purchase.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
+      }
+    } finally {
+      setProcessingPlan(null);
+    }
+  };
+
+  const restorePurchases = async () => {
+    try {
+      setProcessingPlan("restore");
+      const customerInfo = await Purchases.restorePurchases();
+
+      const hasActiveEntitlement =
+        Object.keys(customerInfo.entitlements.active).length > 0;
+      const hasActiveSubscription = customerInfo.activeSubscriptions.length > 0;
+
+      if (hasActiveEntitlement || hasActiveSubscription) {
+        Toast.show({
+          type: "success",
+          position: "bottom",
+          text1: "Success",
+          text2: "Purchases restored successfully!",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
+
+        setCustomerInfo(customerInfo);
+      } else {
+        Toast.show({
+          type: "info",
+          position: "bottom",
+          text1: "No Purchases Found",
+          text2: "No active subscriptions to restore.",
+          visibilityTime: 3000,
+          autoHide: true,
+        });
+      }
+    } catch (error) {
       Toast.show({
         type: "error",
         position: "bottom",
-        text1: "Subscription Error",
-        text2: errorMessage,
+        text1: "Restore Failed",
+        text2: "Could not restore purchases.",
         visibilityTime: 3000,
         autoHide: true,
       });
     } finally {
-      setTimeout(() => {
-        setProcessingPlan(null);
-      }, 1000);
+      setProcessingPlan(null);
     }
   };
 
-  const runAnotherAsyncFunction = async () => {
-    try {
-      const result = await triggerGetMessages().unwrap();
-      dispatch(saveApiSuccess(result.success));
-    } catch (error) { }
+  // Helper functions to check access levels
+  const hasPremiumAccess = () => {
+    return customerInfo?.entitlements.active["premium"] !== undefined;
   };
 
-  const handleBackFromWebView = () => {
-    setCheckoutUrl(null);
-    setProcessingPlan(null);
+  const hasStandardAccess = () => {
+    return customerInfo?.entitlements.active["standard"] !== undefined;
   };
 
-  const handlePaymentSuccess = () => {
-    setCheckoutUrl(null);
-    setProcessingPlan(null);
-    setLoading(true);
-    Toast.show({
-      type: "success",
-      position: "bottom",
-      text1: "Payment Successful",
-      text2: "Your subscription has been activated successfully!",
-      visibilityTime: 3000,
-      autoHide: true,
-    });
-
-    setTimeout(() => {
-      navigateWithCallback(() => true, 1000); // Navigate after a short delay
-    }, 1000);
+  const hasAnyAccess = () => {
+    return hasPremiumAccess() || hasStandardAccess();
   };
 
-  const handlePaymentCancel = () => {
-    setCheckoutUrl(null);
-    setProcessingPlan(null);
-    Toast.show({
-      type: "error",
-      position: "bottom",
-      text1: "Payment Canceled",
-      text2: "Your payment has been canceled. You can try again anytime.",
-      visibilityTime: 3000,
-      autoHide: true,
-    });
+  const getActiveAccessLevel = () => {
+    if (hasPremiumAccess()) return "Premium";
+    if (hasStandardAccess()) return "Standard";
+    return null;
   };
 
-  if (checkoutUrl) {
-    if (loading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1B9E6C" />
-          <Text style={styles.loadingText}>
-            Activating your subscription...
-          </Text>
-        </View>
-      );
-    }
-
-    return (
-      <View style={{ flex: 1 }}>
-        <WebView
-          source={{ uri: checkoutUrl }}
-          style={{ flex: 1 }}
-          onNavigationStateChange={(navState) => {
-            const url = navState.url;
-            if (url.includes("/success")) {
-              handlePaymentSuccess();
-            }
-            if (url.includes("/error")) {
-              handlePaymentCancel();
-            }
-          }}
-          onError={(error) => handleBackFromWebView()}
-        />
-      </View>
-    );
-  }
-
-  if (plansLoading) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1B9E6C" />
@@ -230,79 +209,159 @@ const Subscriptions = () => {
     );
   }
 
+  const activeAccessLevel = getActiveAccessLevel();
+
   return (
     <ScrollView style={styles.container}>
-      {/* Top Header Section */}
-      <View style={styles.header}>
-        <View style={styles.loginContainer}>
-          <Text style={styles.loginPrompt}>Already have a subscription?</Text>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => router.push("/LoginScreen")}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.loginButtonText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <Text style={styles.title}>Choose Your Plan</Text>
 
+      {/* Show current subscription status */}
+      {hasAnyAccess() && (
+        <View
+          style={[
+            styles.activeSubscriptionBanner,
+            hasPremiumAccess() ? styles.premiumBanner : styles.standardBanner,
+          ]}
+        >
+          <Text style={styles.activeSubscriptionText}>
+            ✅ You have {activeAccessLevel} Access
+          </Text>
+          {customerInfo.activeSubscriptions.length > 0 && (
+            <Text style={styles.activeSubscriptionSubtext}>
+              Active Plan: {customerInfo.activeSubscriptions.join(", ")}
+            </Text>
+          )}
+          {customerInfo.entitlements.active[
+            activeAccessLevel.toLowerCase()
+          ] && (
+            <Text style={styles.activeSubscriptionSubtext}>
+              Expires:{" "}
+              {new Date(
+                customerInfo.entitlements.active[
+                  activeAccessLevel.toLowerCase()
+                ].expirationDate,
+              ).toLocaleDateString()}
+            </Text>
+          )}
+        </View>
+      )}
+
       <View style={styles.planContainer}>
-        {allPlans?.result?.map((plan) => {
-          const isProcessing = processingPlan === plan.name;
-          const isAnyProcessing = processingPlan !== null;
-
-          return (
-            <View key={plan.name} style={styles.planCard}>
-              <View style={styles.nameSection}>
-                <Text
-                  style={styles.planName}
-                  onLayout={(event) =>
-                    handleLayout(plan.name, event.nativeEvent.layout.width)
-                  }
-                >
-                  {plan.label || plan.name}
-                </Text>
-                <View
-                  style={[
-                    styles.divider,
-                    { width: textWidths[plan.name] || 0 },
-                  ]}
-                />
-              </View>
-
-              <Text style={styles.planDetails}>
-                <Text style={styles.planDuration}>{plan.label}</Text>
-              </Text>
-
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  isAnyProcessing && !isProcessing && styles.buttonDisabled,
-                ]}
-                onPress={() => handleSubscription(plan)}
-                disabled={isAnyProcessing}
-              >
-                {isProcessing ? (
-                  <View style={styles.buttonLoadingContainer}>
-                    <ActivityIndicator size="small" color="#fff" />
-                    <Text style={[styles.buttonText, { marginLeft: 8 }]}>
-                      Processing...
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={styles.buttonText}>
-                    {plan.name === "free-trial"
-                      ? "Start Free Trial"
-                      : "Purchase"}
-                  </Text>
-                )}
-              </TouchableOpacity>
+        {/* Monthly Plan */}
+        {offerings?.all?.Monthly?.monthly && (
+          <View style={styles.planCard}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>STANDARD</Text>
             </View>
-          );
-        })}
+
+            <View style={styles.nameSection}>
+              <Text style={styles.planName}>Monthly Plan</Text>
+              <View style={styles.divider} />
+            </View>
+
+            <Text style={styles.planDuration}>
+              {offerings.all.Monthly.monthly.product.priceString}
+            </Text>
+
+            <Text style={styles.planPeriod}>per month</Text>
+
+            <Text style={styles.planDescription}>
+              {offerings.all.Monthly.monthly.product.title}
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.button,
+                processingPlan &&
+                  processingPlan !== "monthly" &&
+                  styles.buttonDisabled,
+              ]}
+              onPress={() => handlePurchase("monthly")}
+              disabled={processingPlan !== null}
+            >
+              {processingPlan === "monthly" ? (
+                <View style={styles.buttonLoadingContainer}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                    Processing...
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.buttonText}>
+                  {hasStandardAccess() ? "Current Plan" : "Subscribe Monthly"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Yearly Plan */}
+        {offerings?.all?.Yearly?.annual && (
+          <View style={[styles.planCard, styles.premiumCard]}>
+            <View style={[styles.badge, styles.premiumBadge]}>
+              <Text style={styles.badgeText}>PREMIUM</Text>
+            </View>
+
+            <View style={styles.nameSection}>
+              <Text style={styles.planName}>Yearly Plan</Text>
+              <View style={[styles.divider, styles.premiumDivider]} />
+            </View>
+
+            <Text style={[styles.planDuration, styles.premiumText]}>
+              {offerings.all.Yearly.annual.product.priceString}
+            </Text>
+
+            <Text style={styles.planPeriod}>per year</Text>
+
+            <Text style={styles.planSavings}>
+              Only {offerings.all.Yearly.annual.product.pricePerMonthString}
+              /month
+            </Text>
+
+            <Text style={styles.planDescription}>
+              {offerings.all.Yearly.annual.product.title}
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.button,
+                styles.premiumButton,
+                processingPlan &&
+                  processingPlan !== "yearly" &&
+                  styles.buttonDisabled,
+              ]}
+              onPress={() => handlePurchase("yearly")}
+              disabled={processingPlan !== null}
+            >
+              {processingPlan === "yearly" ? (
+                <View style={styles.buttonLoadingContainer}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                    Processing...
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.buttonText}>
+                  {hasPremiumAccess() ? "Current Plan" : "Subscribe Yearly"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
+
+      {/* Restore Purchases Button */}
+      <TouchableOpacity
+        style={styles.restoreButton}
+        onPress={restorePurchases}
+        disabled={processingPlan !== null}
+      >
+        {processingPlan === "restore" ? (
+          <ActivityIndicator size="small" color="#1B9E6C" />
+        ) : (
+          <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+        )}
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -333,6 +392,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
   },
+  activeSubscriptionBanner: {
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  standardBanner: {
+    backgroundColor: "#E8F5E9",
+  },
+  premiumBanner: {
+    backgroundColor: "#FFF4E6",
+  },
+  activeSubscriptionText: {
+    color: "#1B9E6C",
+    fontWeight: "600",
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  activeSubscriptionSubtext: {
+    color: "#1B9E6C",
+    fontSize: 12,
+    marginTop: 2,
+  },
   planContainer: {
     gap: 16,
   },
@@ -347,23 +429,77 @@ const styles = StyleSheet.create({
     elevation: 2,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
+    position: "relative",
+  },
+  premiumCard: {
+    borderWidth: 2,
+    borderColor: "#FF9800",
+  },
+  badge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    backgroundColor: "#1B9E6C",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  premiumBadge: {
+    backgroundColor: "#FF9800",
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
+    letterSpacing: 0.5,
+  },
+  nameSection: {
+    alignItems: "center",
+    marginBottom: 12,
+    width: "100%",
+    marginTop: 12,
   },
   planName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
     color: "#333",
     marginBottom: 8,
   },
+  divider: {
+    height: 2,
+    width: 100,
+    backgroundColor: "#1B9E6C",
+    marginTop: 4,
+    borderRadius: 2,
+  },
+  premiumDivider: {
+    backgroundColor: "#FF9800",
+  },
   planDuration: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "bold",
     color: "#1B9E6C",
     marginBottom: 4,
   },
-  planPrice: {
+  premiumText: {
+    color: "#FF9800",
+  },
+  planPeriod: {
     fontSize: 14,
-    color: "#1B9E6C",
+    color: "#666",
+    marginBottom: 8,
+  },
+  planSavings: {
+    fontSize: 14,
+    color: "#FF9800",
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  planDescription: {
+    fontSize: 14,
+    color: "#666",
     marginBottom: 16,
+    textAlign: "center",
   },
   button: {
     backgroundColor: "#1B9E6C",
@@ -375,6 +511,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: 50,
     justifyContent: "center",
+  },
+  premiumButton: {
+    backgroundColor: "#FF9800",
   },
   buttonDisabled: {
     backgroundColor: "#ccc",
@@ -389,54 +528,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  nameSection: {
+  restoreButton: {
+    marginTop: 24,
+    paddingVertical: 12,
     alignItems: "center",
-    marginBottom: 12,
   },
-  divider: {
-    height: 2,
-    width: "100%",
-    backgroundColor: "#1B9E6C",
-    marginTop: 4,
-    borderRadius: 2,
-  },
-  planDetails: {
-    padding: 12,
-  },
-  header: {
-    marginBottom: 30,
-    marginTop: 10,
-  },
-  loginContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0', // Subtle border
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  loginPrompt: {
+  restoreButtonText: {
+    color: "#1B9E6C",
     fontSize: 14,
-    color: '#666',
-    marginRight: 8,
+    fontWeight: "600",
   },
-  loginButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
+  debugInfo: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: "#FFF3CD",
     borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#1B9E6C', // Matching your brand color
+    marginBottom: 20,
   },
-  loginButtonText: {
-    color: '#1B9E6C',
-    fontWeight: '700',
-    fontSize: 14,
+  debugTitle: {
+    fontWeight: "bold",
+    marginBottom: 8,
+    color: "#856404",
+  },
+  debugText: {
+    fontSize: 12,
+    color: "#856404",
+    marginTop: 4,
   },
 });

@@ -22,7 +22,6 @@ import {
 import { setToken } from "../redux/slices/authSlice";
 import { saveApiSuccess } from "../redux/slices/messageSlice";
 import { getToken, saveAuthData } from "../utils/secureStore";
-import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 const LoginScreen = () => {
   const [triggerGetMessages, { data }] =
     useLazyGetMessageWithTotalTransactionQuery();
