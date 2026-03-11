@@ -134,7 +134,7 @@ const SettingScreen = () => {
       } else {
         Toast.show({
           type: "info",
-          position: "bottom",
+          position: "top",
           text1: "You’ve already reviewed the app.",
           text2: "Thank you for your feedback!",
           visibilityTime: 3000,
@@ -155,7 +155,7 @@ const SettingScreen = () => {
       await setReviewInfo({ hasReviewed: true });
       Toast.show({
         type: "success",
-        position: "bottom",
+        position: "top",
         text1: "Thank you!",
         text2: `You rated us ${rating} star${rating > 1 ? "s" : ""}.`,
         visibilityTime: 3000,
@@ -166,7 +166,7 @@ const SettingScreen = () => {
     } catch (error) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Error",
         text2: "Something went wrong. Please try again.",
         visibilityTime: 3000,

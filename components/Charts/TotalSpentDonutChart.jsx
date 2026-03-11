@@ -123,7 +123,7 @@ const TotalSpentDonutChart = ({
                 style={{
                   position: "absolute",
                   left: iconPosition.x - radius / 8, // Adjust for icon centering
-                  top: iconPosition.y - radius / 8, // Adjust for icon centering
+                  top: iconPosition.y - radius / 8, 
                 }}
               />
             </G>

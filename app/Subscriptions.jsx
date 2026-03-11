@@ -10,12 +10,14 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 import Purchases from "react-native-purchases";
-
+import { useCreatePaymentMutation } from "../redux/services/api";
 const Subscriptions = () => {
   const [processingPlan, setProcessingPlan] = useState(null);
   const [offerings, setOfferings] = useState(null);
   const [customerInfo, setCustomerInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const [createPayment] = useCreatePaymentMutation();
 
   useEffect(() => {
     initializeRevenueCat();
@@ -39,12 +41,45 @@ const Subscriptions = () => {
     }
   };
 
+  const verifySubscription = (customerInfo) => {
+    const hasActiveEntitlements =
+      Object.keys(customerInfo.entitlements.active).length > 0;
+    const hasActiveSubscriptions = customerInfo.activeSubscriptions.length > 0;
+
+    const activePremium = customerInfo.entitlements.active["premium"];
+    const activeStandard = customerInfo.entitlements.active["standard"];
+
+    if (hasActiveEntitlements && (activePremium || activeStandard)) {
+      const entitlement = activePremium || activeStandard;
+      const entitlementName = activePremium ? "Premium" : "Standard";
+
+      const isValid =
+        entitlement.isActive &&
+        new Date(entitlement.expirationDate) > new Date();
+
+      return { isValid, entitlementName, entitlement, type: "entitlement" };
+    } else if (hasActiveSubscriptions) {
+      return {
+        isValid: true,
+        entitlementName: "Subscription",
+        entitlement: null,
+        type: "subscription",
+      };
+    }
+
+    return {
+      isValid: false,
+      entitlementName: null,
+      entitlement: null,
+      type: null,
+    };
+  };
+
   const handlePurchase = async (packageIdentifier) => {
     if (processingPlan) return;
 
     try {
       setProcessingPlan(packageIdentifier);
-
       let rcPackage = null;
 
       if (packageIdentifier === "monthly") {
@@ -56,67 +91,71 @@ const Subscriptions = () => {
       if (!rcPackage) {
         Toast.show({
           type: "error",
-          position: "bottom",
+          position: "top",
           text1: "Error",
           text2: "Subscription package not found.",
           visibilityTime: 3000,
           autoHide: true,
         });
+        setProcessingPlan(null);
         return;
       }
-
 
       const { customerInfo: purchaseInfo } =
         await Purchases.purchasePackage(rcPackage);
 
+      const verification = verifySubscription(purchaseInfo);
 
-      // Check for active entitlements
-      const activePremium = purchaseInfo.entitlements.active["premium"];
-      const activeStandard = purchaseInfo.entitlements.active["standard"];
+      if (verification.isValid) {
+        setCustomerInfo(purchaseInfo);
 
-      if (activePremium || activeStandard) {
-        const entitlementName = activePremium ? "Premium" : "Standard";
-        const entitlement = activePremium || activeStandard;
+        const activeProductId = purchaseInfo.activeSubscriptions?.[0];
+        const subscription =
+          purchaseInfo.subscriptionsByProductIdentifier?.[activeProductId];
+
+        const paymentPayload = {
+          sessionId: subscription?.storeTransactionId ?? "",
+          amount: Math.round(rcPackage.product.price * 100),
+          currency: rcPackage.product.currencyCode?.toLowerCase() ?? "usd",
+          paymentProvider: "revenuecat",
+          transitionId: subscription?.storeTransactionId ?? "",
+          startDate: subscription?.purchaseDate ?? new Date().toISOString(),
+          endDate: subscription?.expiresDate ?? new Date().toISOString(),
+          membershipPlanId: rcPackage.offeringIdentifier ?? packageIdentifier,
+        };
+
+        console.log(paymentPayload);
+        try {
+          const paymentResult = await createPayment(paymentPayload).unwrap();
+        } catch (paymentError) {}
 
         Toast.show({
           type: "success",
-          position: "bottom",
+          position: "top",
           text1: "Success",
-          text2: `${entitlementName} Access activated!`,
+          text2: `${verification.entitlementName} Access activated!`,
           visibilityTime: 3000,
           autoHide: true,
         });
 
-        // Navigate to next screen
         setTimeout(() => {
           router.push("Currency");
         }, 1500);
       } else {
-        // Fallback if entitlements aren't configured properly
-        const hasActiveSubscription =
-          purchaseInfo.activeSubscriptions.length > 0;
-
-        if (hasActiveSubscription) {
-          Toast.show({
-            type: "success",
-            position: "bottom",
-            text1: "Purchase Complete",
-            text2: "Subscription active!",
-            visibilityTime: 3000,
-            autoHide: true,
-          });
-
-          setTimeout(() => {
-            router.push("Currency");
-          }, 1500);
-        }
+        Toast.show({
+          type: "error",
+          position: "top",
+          text1: "Verification Failed",
+          text2: "Please contact support or try restoring purchases.",
+          visibilityTime: 4000,
+          autoHide: true,
+        });
       }
     } catch (error) {
       if (error.userCancelled) {
-
         Toast.show({
           type: "info",
-          position: "bottom",
+          position: "top",
           text1: "Cancelled",
           text2: "Purchase was cancelled.",
           visibilityTime: 2000,
@@ -125,7 +164,7 @@ const Subscriptions = () => {
       } else {
         Toast.show({
           type: "error",
-          position: "bottom",
+          position: "top",
           text1: "Purchase Failed",
           text2: error.message || "An error occurred during purchase.",
           visibilityTime: 3000,
@@ -137,30 +176,79 @@ const Subscriptions = () => {
     }
   };
 
+  // ✅ Free trial — no RevenueCat purchase needed, send dates + RC metadata to backend
+  const handleFreeTrial = async () => {
+    if (processingPlan) return;
+
+    try {
+      setProcessingPlan("trial");
+
+      const now = new Date();
+      const trialEnd = new Date(now);
+      trialEnd.setDate(trialEnd.getDate() + 7);
+
+      const paymentPayload = {
+        sessionId: `trial_${customerInfo?.originalAppUserId ?? Date.now()}`,
+        amount: 0,
+        currency: "usd",
+        paymentProvider: "revenuecat",
+        transitionId: `trial_${customerInfo?.originalAppUserId ?? Date.now()}`,
+        startDate: now.toISOString(),
+        endDate: trialEnd.toISOString(),
+        membershipPlanId: "7_days_trial",
+      };
+
+      await createPayment(paymentPayload).unwrap();
+      console.log("monthly",paymentPayload);
+
+      Toast.show({
+        type: "success",
+        position: "top",
+        text1: "Free Trial Started!",
+        text2: "You have 7 days of free access.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
+
+      setTimeout(() => {
+        router.push("Currency");
+      }, 1500);
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Trial Failed",
+        text2: error.message || "Could not start free trial.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
+    } finally {
+      setProcessingPlan(null);
+    }
+  };
+
   const restorePurchases = async () => {
     try {
       setProcessingPlan("restore");
+
       const customerInfo = await Purchases.restorePurchases();
 
-      const hasActiveEntitlement =
-        Object.keys(customerInfo.entitlements.active).length > 0;
-      const hasActiveSubscription = customerInfo.activeSubscriptions.length > 0;
+      const verification = verifySubscription(customerInfo);
 
-      if (hasActiveEntitlement || hasActiveSubscription) {
+      if (verification.isValid) {
+        setCustomerInfo(customerInfo);
         Toast.show({
           type: "success",
-          position: "bottom",
+          position: "top",
           text1: "Success",
           text2: "Purchases restored successfully!",
           visibilityTime: 3000,
           autoHide: true,
         });
-
-        setCustomerInfo(customerInfo);
       } else {
         Toast.show({
           type: "info",
-          position: "bottom",
+          position: "top",
           text1: "No Purchases Found",
           text2: "No active subscriptions to restore.",
           visibilityTime: 3000,
@@ -170,7 +258,7 @@ const Subscriptions = () => {
     } catch (error) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Restore Failed",
         text2: "Could not restore purchases.",
         visibilityTime: 3000,
@@ -181,19 +269,11 @@ const Subscriptions = () => {
     }
   };
 
-  // Helper functions to check access levels
-  const hasPremiumAccess = () => {
-    return customerInfo?.entitlements.active["premium"] !== undefined;
-  };
-
-  const hasStandardAccess = () => {
-    return customerInfo?.entitlements.active["standard"] !== undefined;
-  };
-
-  const hasAnyAccess = () => {
-    return hasPremiumAccess() || hasStandardAccess();
-  };
-
+  const hasPremiumAccess = () =>
+    customerInfo?.entitlements.active["premium"] !== undefined;
+  const hasStandardAccess = () =>
+    customerInfo?.entitlements.active["standard"] !== undefined;
+  const hasAnyAccess = () => hasPremiumAccess() || hasStandardAccess();
   const getActiveAccessLevel = () => {
     if (hasPremiumAccess()) return "Premium";
     if (hasStandardAccess()) return "Standard";
@@ -215,12 +295,14 @@ const Subscriptions = () => {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Choose Your Plan</Text>
 
-      {/* Show current subscription status */}
+      {/* Active subscription banner */}
       {hasAnyAccess() && (
         <View
           style={[
             styles.activeSubscriptionBanner,
-            hasPremiumAccess() ? styles.premiumBanner : styles.standardBanner,
+            activeAccessLevel === "Premium"
+              ? styles.premiumBanner
+              : styles.standardBanner,
           ]}
         >
           <Text style={styles.activeSubscriptionText}>
@@ -247,6 +329,46 @@ const Subscriptions = () => {
       )}
 
       <View style={styles.planContainer}>
+        {/* ✅ Free Trial Card — 7 Days */}
+        <View style={styles.planCard}>
+          <View style={[styles.badge, styles.trialBadge]}>
+            <Text style={styles.badgeText}>FREE</Text>
+          </View>
+
+          <View style={styles.nameSection}>
+            <Text style={styles.planName}>7-Day Free Trial</Text>
+            <View style={[styles.divider, styles.trialDivider]} />
+          </View>
+
+          <Text style={[styles.planDuration, styles.trialText]}>$0.00</Text>
+          <Text style={styles.planPeriod}>for 7 days</Text>
+
+          <Text style={styles.planDescription}>
+            Try all features free for 7 days. No charges during trial.
+          </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              styles.trialButton,
+              processingPlan !== null && styles.buttonDisabled,
+            ]}
+            onPress={handleFreeTrial}
+            disabled={processingPlan !== null}
+          >
+            {processingPlan === "trial" ? (
+              <View style={styles.buttonLoadingContainer}>
+                <ActivityIndicator size="small" color="#fff" />
+                <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                  Starting...
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.buttonText}>Start Free Trial</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
         {/* Monthly Plan */}
         {offerings?.all?.Monthly?.monthly && (
           <View style={styles.planCard}>
@@ -262,7 +384,6 @@ const Subscriptions = () => {
             <Text style={styles.planDuration}>
               {offerings.all.Monthly.monthly.product.priceString}
             </Text>
-
             <Text style={styles.planPeriod}>per month</Text>
 
             <Text style={styles.planDescription}>
@@ -272,9 +393,7 @@ const Subscriptions = () => {
             <TouchableOpacity
               style={[
                 styles.button,
-                processingPlan &&
-                  processingPlan !== "monthly" &&
-                  styles.buttonDisabled,
+                processingPlan !== null && styles.buttonDisabled,
               ]}
               onPress={() => handlePurchase("monthly")}
               disabled={processingPlan !== null}
@@ -310,13 +429,14 @@ const Subscriptions = () => {
             <Text style={[styles.planDuration, styles.premiumText]}>
               {offerings.all.Yearly.annual.product.priceString}
             </Text>
-
             <Text style={styles.planPeriod}>per year</Text>
 
-            <Text style={styles.planSavings}>
-              Only {offerings.all.Yearly.annual.product.pricePerMonthString}
-              /month
-            </Text>
+            {offerings.all.Yearly.annual.product.pricePerMonthString && (
+              <Text style={styles.planSavings}>
+                Only {offerings.all.Yearly.annual.product.pricePerMonthString}{" "}
+                /month
+              </Text>
+            )}
 
             <Text style={styles.planDescription}>
               {offerings.all.Yearly.annual.product.title}
@@ -326,9 +446,7 @@ const Subscriptions = () => {
               style={[
                 styles.button,
                 styles.premiumButton,
-                processingPlan &&
-                  processingPlan !== "yearly" &&
-                  styles.buttonDisabled,
+                processingPlan !== null && styles.buttonDisabled,
               ]}
               onPress={() => handlePurchase("yearly")}
               disabled={processingPlan !== null}
@@ -350,7 +468,7 @@ const Subscriptions = () => {
         )}
       </View>
 
-      {/* Restore Purchases Button */}
+      {/* Restore Purchases */}
       <TouchableOpacity
         style={styles.restoreButton}
         onPress={restorePurchases}
@@ -447,6 +565,9 @@ const styles = StyleSheet.create({
   premiumBadge: {
     backgroundColor: "#FF9800",
   },
+  trialBadge: {
+    backgroundColor: "#4A90D9",
+  },
   badgeText: {
     color: "white",
     fontSize: 10,
@@ -475,6 +596,9 @@ const styles = StyleSheet.create({
   premiumDivider: {
     backgroundColor: "#FF9800",
   },
+  trialDivider: {
+    backgroundColor: "#4A90D9",
+  },
   planDuration: {
     fontSize: 32,
     fontWeight: "bold",
@@ -483,6 +607,9 @@ const styles = StyleSheet.create({
   },
   premiumText: {
     color: "#FF9800",
+  },
+  trialText: {
+    color: "#4A90D9",
   },
   planPeriod: {
     fontSize: 14,
@@ -515,6 +642,9 @@ const styles = StyleSheet.create({
   premiumButton: {
     backgroundColor: "#FF9800",
   },
+  trialButton: {
+    backgroundColor: "#4A90D9",
+  },
   buttonDisabled: {
     backgroundColor: "#ccc",
     opacity: 0.6,
@@ -530,6 +660,7 @@ const styles = StyleSheet.create({
   },
   restoreButton: {
     marginTop: 24,
+    marginBottom: 40,
     paddingVertical: 12,
     alignItems: "center",
   },
@@ -537,22 +668,5 @@ const styles = StyleSheet.create({
     color: "#1B9E6C",
     fontSize: 14,
     fontWeight: "600",
-  },
-  debugInfo: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: "#FFF3CD",
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  debugTitle: {
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#856404",
-  },
-  debugText: {
-    fontSize: 12,
-    color: "#856404",
-    marginTop: 4,
   },
 });

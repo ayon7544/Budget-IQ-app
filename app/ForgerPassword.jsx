@@ -35,7 +35,7 @@ const ForgotPassword = () => {
     if (!isEmailValid) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Validation Error",
         text2: "Please enter a valid email address.",
         visibilityTime: 3000,
@@ -55,7 +55,7 @@ const ForgotPassword = () => {
     } catch (err) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Error",
         text2: err?.data?.message || "Something went wrong. Please try again.",
         visibilityTime: 3000,

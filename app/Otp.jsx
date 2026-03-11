@@ -61,7 +61,7 @@ const Otp = () => {
         e?.data?.message || "Invalid code. Please try again.";
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "OTP Error",
         text2: errorMessage,
         visibilityTime: 3000,

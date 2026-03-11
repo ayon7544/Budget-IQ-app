@@ -229,6 +229,13 @@ export const api = createApi({
         body: data,
       }),
     }),
+    createPayment: builder.mutation({
+      query: (data) => ({
+        url: "/payment/app-payment-init",
+        method: "POST",
+        body: data,
+      }),
+    }),
   }),
 });
 
@@ -257,4 +264,5 @@ export const {
   useGetUpdateTransactionMutation,
   useGetReviewTheAppMutation,
   useCurrencyMutation,
+  useCreatePaymentMutation,
 } = api;

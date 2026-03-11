@@ -61,7 +61,7 @@ const AccountVerification = () => {
     if (!email) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Error",
         text2: "Email is missing. Cannot resend OTP.",
         visibilityTime: 3000,
@@ -77,44 +77,22 @@ const AccountVerification = () => {
       const response = await resentOtp({ email }).unwrap();
       Toast.show({
         type: "success",
-        position: "bottom",
+        position: "top",
         text1: "Success",
         text2: "A new OTP has been sent to your email.",
         visibilityTime: 3000,
         autoHide: true,
       });
     } catch (e) {
-      const statusCode = e?.status;
       const message = e?.data?.message || "Unable to resend OTP.";
-
-      if (statusCode === 429) {
         Toast.show({
           type: "error",
-          position: "bottom",
-          text1: "Too Many Requests",
-          text2: "Please wait before requesting again.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
-      } else if (statusCode === 500) {
-        Toast.show({
-          type: "error",
-          position: "bottom",
-          text1: "Server Error",
-          text2: "Please try again later.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
-      } else {
-        Toast.show({
-          type: "error",
-          position: "bottom",
+          position: "top",
           text1: "Error",
           text2: message,
           visibilityTime: 3000,
           autoHide: true,
         });
-      }
 
       // ✅ Allow user to retry after failure
       setIsResendDisabled(false);
@@ -126,7 +104,7 @@ const AccountVerification = () => {
     if (otp.join("").length < 6) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Invalid OTP",
         text2: "Please enter the complete 6-digit code.",
         visibilityTime: 3000,
@@ -138,7 +116,7 @@ const AccountVerification = () => {
     if (!email || !password) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Missing Data",
         text2: "Email or password is missing. Please restart the process.",
         visibilityTime: 3000,
@@ -165,7 +143,7 @@ const AccountVerification = () => {
         } else {
           Toast.show({
             type: "error",
-            position: "bottom",
+            position: "top",
             text1: "Sign-in Error",
             text2: "Token is missing. Please try again.",
             visibilityTime: 3000,
@@ -173,38 +151,17 @@ const AccountVerification = () => {
           });
         }
       } catch (signInError) {
-        const statusCode = signInError?.status;
         const message =
           signInError?.data?.message || "Sign-in failed. Please try again.";
-
-        if (statusCode === 401) {
           Toast.show({
             type: "error",
-            position: "bottom",
-            text1: "Authentication Failed",
-            text2: "Invalid credentials.",
-            visibilityTime: 3000,
-            autoHide: true,
-          });
-        } else if (statusCode === 500) {
-          Toast.show({
-            type: "error",
-            position: "bottom",
-            text1: "Server Error",
-            text2: "Unable to sign in. Try again later.",
-            visibilityTime: 3000,
-            autoHide: true,
-          });
-        } else {
-          Toast.show({
-            type: "error",
-            position: "bottom",
+            position: "top",
             text1: "Error",
             text2: message,
             visibilityTime: 3000,
             autoHide: true,
           });
-        }
+        
       }
     } catch (err) {
       const statusCode = err?.data?.err?.statusCode || err?.status || 500;
@@ -212,7 +169,7 @@ const AccountVerification = () => {
 
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "❌ Error", // Add emoji or custom title
         text2: message,
         visibilityTime: 3000,

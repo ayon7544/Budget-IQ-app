@@ -91,7 +91,7 @@ const ExpensesCategories = () => {
     if (selectedCategories.length === 0) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Error",
         text2: "Please select at least one category.",
         visibilityTime: 3000,

@@ -1,12 +1,12 @@
 {
   "expo": {
     "name": "Budget IQ",
-    "slug": "budget-iq-app",
+    "slug": "budget-iq",
     "owner": "ayonghosh",
-    "version": "1.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/welcome.png",
-    "scheme": "budgetiqapp",
+    "scheme": "budgetiq",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -16,8 +16,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.budgetiqapp",
-      "buildNumber": "2.0.0",
+      "bundleIdentifier": "com.budgetiq.mobile",
+      "buildNumber": "1",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to let you select and upload images.",
         "NSCameraUsageDescription": "This app needs access to your camera to take photos.",
@@ -25,7 +25,7 @@
       }
     },
     "android": {
-      "package": "com.anonymous.budgetiqapp",
+      "package": "com.budgetiq.mobile",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/welcome.png",
@@ -53,7 +53,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "d03cd681-a4ab-425f-9195-6b422d88a26a"
+        "projectId": "4c94e96b-3cfe-4c59-a756-c3fcd88d79e1"
       }
     }
   }

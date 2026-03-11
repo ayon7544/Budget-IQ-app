@@ -31,7 +31,7 @@ const NewPassword = () => {
     if (!newPassword) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Error",
         text2: "Password cannot be empty",
         visibilityTime: 3000,
@@ -43,7 +43,7 @@ const NewPassword = () => {
     if (newPassword !== confirmPassword) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Error",
         text2: "Passwords do not match",
         visibilityTime: 3000,
@@ -64,7 +64,7 @@ const NewPassword = () => {
     } catch (e) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Error",
         text2: e?.data?.message || "Something went wrong",
         visibilityTime: 3000,

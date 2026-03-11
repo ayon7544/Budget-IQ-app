@@ -68,7 +68,7 @@ const AccountInformation = () => {
     if (!permission.granted) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Permission Denied",
         text2: "Permission to access the camera roll is required!",
         visibilityTime: 3000,
@@ -141,7 +141,7 @@ const AccountInformation = () => {
     } catch {
       Toast.show({
         type: "error",
-        position: "bottom", 
+        position: "top", 
         text1: "Upload Failed", 
         text2: "Please try again or use a smaller image.", 
         visibilityTime: 3000, 

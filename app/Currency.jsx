@@ -47,7 +47,7 @@ const Currency = () => {
       setSelectedCurrency(selected.code); // ✅ highlight selected
       Toast.show({
         type: "success",
-        position: "bottom",
+        position: "top",
         text1: "Success",
         text2: result.message,
         visibilityTime: 3000,
@@ -58,9 +58,9 @@ const Currency = () => {
     } catch (err) {
       Toast.show({
         type: "error",
-        position: "bottom",
-        text1: "Error",
-        text2: "Something went wrong while setting currency",
+        position: "top",
+        text1: err,
+        text2: err?.data?.message,
         visibilityTime: 3000,
         autoHide: true,
       });

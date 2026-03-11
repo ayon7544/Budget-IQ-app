@@ -110,7 +110,7 @@ const IncrementDecrementAmount = () => {
       if (!amount || parseInt(amount) <= 0) {
         Toast.show({
           type: "error",
-          position: "bottom",
+          position: "top",
           text1: "Error",
           text2: "Amount must be greater than 0",
           visibilityTime: 3000,

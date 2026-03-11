@@ -109,7 +109,7 @@ const SignUpScreen = () => {
     ) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Validation Error",
         text2: "All fields are required.",
         visibilityTime: 3000,
@@ -121,7 +121,7 @@ const SignUpScreen = () => {
     if (formData.password !== formData.confirmPassword) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Validation Error",
         text2: "Passwords do not match.",
         visibilityTime: 3000,
@@ -133,7 +133,7 @@ const SignUpScreen = () => {
     if (formData.password.length < 6) {
       Toast.show({
         type: "error",
-        position: "bottom",
+        position: "top",
         text1: "Weak Password",
         text2: "Password must be at least 6 characters long.",
         visibilityTime: 3000,
@@ -150,7 +150,7 @@ const SignUpScreen = () => {
         contactNo: formData.contactNo.trim(),
         password: formData.password,
       }).unwrap();
-
+      console.log(response);
       // ✅ Save data securely
       await SecureStore.setItemAsync("userFullName", formData.fullName);
       await SecureStore.setItemAsync("userEmail", formData.email);
@@ -168,60 +168,21 @@ const SignUpScreen = () => {
       // ✅ Extract error details
       const statusCode = err?.status || err?.originalStatus;
       const serverMessage = err?.data?.message || "";
-
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Sign Up Failed",
+        text2: serverMessage +" Click ResentOtp To get New Otp" || "Invalid input. Please check your data.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
       if (statusCode === 400) {
-        Toast.show({
-          type: "error",
-          position: "bottom",
-          text1: "Sign Up Failed",
-          text2: serverMessage || "Invalid input. Please check your data.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
-      } else if (statusCode === 409) {
-        Toast.show({
-          type: "error",
-          position: "bottom",
-          text1: "Email Exists",
-          text2: "An account with this email already exists. Please log in.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
-      } else if (statusCode === 422) {
-        Toast.show({
-          type: "error",
-          position: "bottom",
-          text1: "Validation Error",
-          text2: "Please check your email and contact number.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
-      } else if (statusCode === 500) {
-        Toast.show({
-          type: "error",
-          position: "bottom",
-          text1: "Server Error",
-          text2: "Something went wrong on our end. Please try again later.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
-      } else if (err.name === "TypeError") {
-        Toast.show({
-          type: "error",
-          position: "bottom",
-          text1: "Network Error",
-          text2: "Please check your internet connection.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
-      } else {
-        Toast.show({
-          type: "error",
-          position: "bottom",
-          text1: "Error",
-          text2: serverMessage || "Sign Up failed. Please try again.",
-          visibilityTime: 3000,
-          autoHide: true,
+        router.push({
+          pathname: "/AccountVerification",
+          params: {
+            email: formData.email,
+            password: formData.password,
+          },
         });
       }
     }
