@@ -1,138 +1,113 @@
 import { Stack } from "expo-router";
-import { StatusBar } from "react-native";
+import { StatusBar, LogBox } from "react-native";
 import { Provider } from "react-redux";
-import { store } from "../redux/store";
-import Toast from "react-native-toast-message"; // Import Toast
-import { LogBox } from "react-native";
-import Purchases from "react-native-purchases";
-import { useEffect } from "react";
-import { Platform } from "react-native";
-LogBox.ignoreAllLogs(true);
-export default function RootLayout() {
-    useEffect(() => {
-    const iosApiKey = "appl_YIVfXiFWPOITADwwdAynEOcIwgT";
-    const androidApiKey = "test_kWieknaelwLRaldyrYTIWSHfjlO";
+import Toast from "react-native-toast-message";
 
-    if (Platform.OS === "ios") {
-      Purchases.configure({ apiKey: iosApiKey });
-    } else if (Platform.OS === "android") {
-      Purchases.configure({ apiKey: androidApiKey });
-    }
-  }, []);
+import { store } from "../redux/store";
+
+LogBox.ignoreAllLogs(true);
+
+export default function RootLayout() {
+  const defaultHeader = {
+    headerTitleAlign: "center",
+    headerShadowVisible: false,
+    headerTintColor: "#000",
+    headerBackTitle: "",
+  };
+
+  const hiddenHeader = { headerShown: false };
+
   return (
     <Provider store={store}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+
       <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="InitialScreen" options={{ headerShown: false }} />
-        <Stack.Screen name="SecondScreen" options={{ headerShown: false }} />
-        <Stack.Screen name="LoginScreen" options={{ headerShown: false }} />
+        {/* Initial Screens */}
+        <Stack.Screen name="index" options={hiddenHeader} />
+        <Stack.Screen name="InitialScreen" options={hiddenHeader} />
+        <Stack.Screen name="SecondScreen" options={hiddenHeader} />
+        <Stack.Screen name="LoginScreen" options={hiddenHeader} />
+        <Stack.Screen name="SignUpScreen" options={hiddenHeader} />
+        <Stack.Screen name="ForgerPassword" options={hiddenHeader} />
+        <Stack.Screen name="AccountVerification" options={hiddenHeader} />
+        <Stack.Screen name="Otp" options={hiddenHeader} />
+        <Stack.Screen name="NewPassword" options={hiddenHeader} />
 
-        {/* FIX for (tabs) to remove title and show black back arrow on iOS */}
-        <Stack.Screen
-          name="(tabs)"
-          options={{
-            headerShown: false,
-            headerTitle: "",
-            headerTintColor: "#000",
-            headerShadowVisible: false,
-            headerBackTitle: "",
-          }}
-        />
+        {/* Tabs */}
+        <Stack.Screen name="(tabs)" options={hiddenHeader} />
 
-        <Stack.Screen name="SignUpScreen" options={{ headerShown: false }} />
-        <Stack.Screen name="ForgerPassword" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="AccountVerification"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen name="Otp" options={{ headerShown: false }} />
-        <Stack.Screen name="NewPassword" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="IncrementDecrementAmount"
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="IncrementDecrementAmount" options={hiddenHeader} />
+
+        {/* Main Screens */}
         <Stack.Screen
           name="Subscriptions"
           options={{
-            title: "Subscriptions Plans",
-            headerTitleStyle: { fontWeight: "700", color: "#000" },
-            headerTitleAlign: "center",
-            headerShadowVisible: false,
+            ...defaultHeader,
+            title: "Subscription Plans",
             headerBackVisible: false,
-            headerTintColor: "#000",
-            headerBackTitle: "",
+            headerTitleStyle: { fontWeight: "700" },
           }}
         />
+
         <Stack.Screen
           name="AccountInformation"
           options={{
+            ...defaultHeader,
             title: "Account Information",
             headerTitleStyle: { fontWeight: "700" },
-            headerShadowVisible: false,
-            headerTitleAlign: "center",
-            headerTintColor: "#000",
-            headerBackTitle: "",
           }}
         />
+
         <Stack.Screen
           name="Currency"
           options={{
+            ...defaultHeader,
             title: "Currency",
-            headerTitleStyle: { fontWeight: "700" },
-            headerShadowVisible: false,
-            headerTitleAlign: "center",
             headerBackVisible: false,
-            headerTintColor: "#000",
-            headerBackTitle: "",
+            headerTitleStyle: { fontWeight: "700" },
           }}
         />
+
+        {/* Policies */}
         <Stack.Screen
           name="TermsAndPolicies"
           options={{
+            ...defaultHeader,
             title: "Terms & Policies",
             headerTitleStyle: { fontWeight: "600" },
-            headerShadowVisible: false,
-            headerTitleAlign: "center",
-            headerTintColor: "#000",
-            headerBackTitle: "",
           }}
         />
+
         <Stack.Screen
           name="PrivacyPolicy"
           options={{
+            ...defaultHeader,
             title: "Privacy Policy",
             headerTitleStyle: { fontWeight: "600" },
-            headerShadowVisible: false,
-            headerTitleAlign: "center",
-            headerTintColor: "#000",
-            headerBackTitle: "",
           }}
         />
+
+        {/* Categories */}
         <Stack.Screen
           name="ExpenseCategories"
           options={{
+            ...defaultHeader,
             title: "Expense Categories",
             headerTitleStyle: { fontWeight: "600" },
-            headerShadowVisible: false,
-            headerTitleAlign: "center",
-            headerTintColor: "#000",
-            headerBackTitle: "",
           }}
         />
+
         <Stack.Screen
           name="IncomeCategories"
           options={{
+            ...defaultHeader,
             title: "Income Categories",
             headerTitleStyle: { fontWeight: "600" },
-            headerShadowVisible: false,
-            headerTitleAlign: "center",
-            headerTintColor: "#000",
-            headerBackTitle: "",
           }}
         />
       </Stack>
-        <Toast />
+
+      <Toast />
     </Provider>
   );
 }
