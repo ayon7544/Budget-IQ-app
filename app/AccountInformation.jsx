@@ -14,10 +14,8 @@ import {
   View,
 
   StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Colors } from "../Constants/Colors";
 import {
   useUserGetMeQuery,
@@ -115,12 +113,12 @@ const AccountInformation = () => {
         const timestamp = `${now.getFullYear()}${(now.getMonth() + 1)
           .toString()
           .padStart(2, "0")}${now.getDate().toString().padStart(2, "0")}_${now
-          .getHours()
-          .toString()
-          .padStart(2, "0")}${now.getMinutes().toString().padStart(2, "0")}${now
-          .getSeconds()
-          .toString()
-          .padStart(2, "0")}`;
+            .getHours()
+            .toString()
+            .padStart(2, "0")}${now.getMinutes().toString().padStart(2, "0")}${now
+              .getSeconds()
+              .toString()
+              .padStart(2, "0")}`;
 
         const sanitizedUserName = finalName.replace(/\s+/g, "_");
         const filename = `${sanitizedUserName}_${timestamp}.${extension}`;
@@ -141,11 +139,11 @@ const AccountInformation = () => {
     } catch {
       Toast.show({
         type: "error",
-        position: "top", 
-        text1: "Upload Failed", 
-        text2: "Please try again or use a smaller image.", 
-        visibilityTime: 3000, 
-        autoHide: true, 
+        position: "top",
+        text1: "Upload Failed",
+        text2: "Please try again or use a smaller image.",
+        visibilityTime: 3000,
+        autoHide: true,
       });
     }
   };
@@ -158,81 +156,74 @@ const AccountInformation = () => {
         barStyle="dark-content"
       />
 
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={
-          Platform.OS === "ios" ? 0 : StatusBar.currentHeight
-        }
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Profile Image */}
-          <View style={styles.imageWrapper}>
-            <Image
-              source={
-                image ? { uri: image } : require("../assets/images/avater.png")
-              }
-              style={styles.image}
-              resizeMode="cover"
-            />
-            <TouchableOpacity style={styles.uploadIcon} onPress={pickImage}>
-              <Ionicons name="camera" size={20} color="#000" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Name Input */}
-          <View style={styles.inputContainer}>
-            <View style={styles.input}>
-              <AntDesign name="user" size={20} color="#555" />
-              <TextInput
-                style={styles.in}
-                value={name}
-                onChangeText={setName}
-                placeholder="Name"
-                placeholderTextColor="#999"
-              />
-            </View>
-          </View>
-
-          {/* Email Input */}
-          <View style={styles.inputContainer}>
-            <View style={styles.input}>
-              <AntDesign name="mail" size={20} color="#555" />
-              <TextInput
-                style={[styles.in, { color: "#999" }]}
-                value={email}
-                onChangeText={validateEmail}
-                placeholder="example@gmail.com"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={false}
-              />
-            </View>
-            {!isEmailValid && (
-              <Text style={styles.errorText}>Please enter a valid email</Text>
-            )}
-          </View>
-
-          {/* Save Button */}
-          <TouchableOpacity
-            style={[
-              styles.button,
-              (isLoading || !isEmailValid) && { opacity: 0.6 },
-            ]}
-            onPress={handleSaveChanges}
-            disabled={isLoading || !isEmailValid}
-          >
-            <Text style={styles.buttonText}>
-              {isLoading ? "Saving..." : "Save Changes"}
-            </Text>
+        {/* Profile Image */}
+        <View style={styles.imageWrapper}>
+          <Image
+            source={
+              image ? { uri: image } : require("../assets/images/avater.png")
+            }
+            style={styles.image}
+            resizeMode="cover"
+          />
+          <TouchableOpacity style={styles.uploadIcon} onPress={pickImage}>
+            <Ionicons name="camera" size={20} color="#000" />
           </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+
+        {/* Name Input */}
+        <View style={styles.inputContainer}>
+          <View style={styles.input}>
+            <AntDesign name="user" size={20} color="#555" />
+            <TextInput
+              style={styles.in}
+              value={name}
+              onChangeText={setName}
+              placeholder="Name"
+              placeholderTextColor="#999"
+            />
+          </View>
+        </View>
+
+        {/* Email Input */}
+        <View style={styles.inputContainer}>
+          <View style={styles.input}>
+            <AntDesign name="mail" size={20} color="#555" />
+            <TextInput
+              style={[styles.in, { color: "#999" }]}
+              value={email}
+              onChangeText={validateEmail}
+              placeholder="example@gmail.com"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={false}
+            />
+          </View>
+          {!isEmailValid && (
+            <Text style={styles.errorText}>Please enter a valid email</Text>
+          )}
+        </View>
+
+        {/* Save Button */}
+        <TouchableOpacity
+          style={[
+            styles.button,
+            (isLoading || !isEmailValid) && { opacity: 0.6 },
+          ]}
+          onPress={handleSaveChanges}
+          disabled={isLoading || !isEmailValid}
+        >
+          <Text style={styles.buttonText}>
+            {isLoading ? "Saving..." : "Save Changes"}
+          </Text>
+        </TouchableOpacity>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

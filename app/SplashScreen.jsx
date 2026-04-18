@@ -1,18 +1,10 @@
 // app/SplashScreenComponent.js
 import { useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  View,
-  StatusBar,
-} from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useDispatch } from "react-redux";
-import { useGetMessageWithTotalTransactionQuery } from "../redux/services/api";
 import { loadTokenFromStorage } from "../redux/slices/authSlice";
-import { saveApiSuccess } from "../redux/slices/messageSlice";
 import { getToken } from "../utils/secureStore";
 
 SplashScreen.preventAutoHideAsync();
@@ -21,59 +13,44 @@ export default function SplashScreenComponent() {
   const router = useRouter();
   const dispatch = useDispatch();
 
-  const [tokenLoaded, setTokenLoaded] = useState(false);
-
-  const { data, isLoading, isError, error } =
-    useGetMessageWithTotalTransactionQuery(undefined, {
-      skip: !tokenLoaded,
-    });
-
   useEffect(() => {
-    const loadTokenAndInit = async () => {
+    const init = async () => {
       try {
         const storedToken = await getToken();
+
         if (storedToken) {
+          // ✅ User is logged in — load token into Redux
           dispatch(loadTokenFromStorage(storedToken));
-        } else {
         }
 
-        setTokenLoaded(true); // now API call will proceed
-      } catch (err) {
-        setTokenLoaded(true);
-      }
-    };
-
-    loadTokenAndInit();
-  }, [dispatch]);
-
-  useEffect(() => {
-    const processApiResponse = async () => {
-      if (!tokenLoaded || isLoading) return;
-
-      try {
-        if (isError) {
-          router.replace("/InitialScreen");
-          return;
-        }
-
-        const successValue = data?.success;
-
-        dispatch(saveApiSuccess(successValue));
-
-        router.replace("/InitialScreen"); // route after splash
-      } catch (err) {
-        router.replace("/InitialScreen");
-      } finally {
+        // ✅ Hide splash first
         await SplashScreen.hideAsync();
+
+        // ✅ Navigate after a tick so layout is ready
+        setTimeout(() => {
+          if (storedToken) {
+            // logged in → go to main app
+            router.replace("/(tabs)");
+          } else {
+            // not logged in → go to onboarding
+            router.replace("/InitialScreen");
+          }
+        }, 100);
+
+      } catch (err) {
+        // Safety fallback — always navigate no matter what
+        await SplashScreen.hideAsync();
+        setTimeout(() => {
+          router.replace("/InitialScreen");
+        }, 100);
       }
     };
 
-    processApiResponse();
-  }, [tokenLoaded, isLoading, isError, data, error, dispatch, router]);
+    init();
+  }, []);   // ✅ runs only once on mount — no dependency array issues
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor="#ffff" barStyle="dark-content" />
       <ActivityIndicator size="large" color="#00C46A" />
       <Text style={styles.text}>Loading...</Text>
     </View>

@@ -3,9 +3,6 @@ import { useNavigation, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +11,7 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useDispatch } from "react-redux";
 import { Colors } from "../Constants/Colors";
 import {
@@ -92,95 +90,90 @@ const LoginScreen = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.container}>
-              <Text style={styles.title}>Log In</Text>
+          <View style={styles.container}>
+            <Text style={styles.title}>Log In</Text>
 
-              <Image
-                source={require("../assets/images/welcome.png")}
-                style={styles.logo}
-              />
-              <Text style={styles.logoText}>BUDGET{"\n"}IQ</Text>
+            <Image
+              source={require("../assets/images/welcome.png")}
+              style={styles.logo}
+            />
+            <Text style={styles.logoText}>BUDGET{"\n"}IQ</Text>
 
-              <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              value={formData.email}
+              style={styles.input}
+              placeholder="consultme@gmail.com"
+              placeholderTextColor="#888"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              onChangeText={validateEmail}
+            />
+
+            <Text style={styles.label}>Password</Text>
+            <View style={{ position: "relative" }}>
               <TextInput
-                value={formData.email}
-                style={styles.input}
-                placeholder="consultme@gmail.com"
+                value={formData.password}
+                style={[styles.input, { paddingRight: 40 }]}
+                placeholder="********"
                 placeholderTextColor="#888"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                onChangeText={validateEmail}
+                secureTextEntry={!showPassword}
+                onChangeText={(text) => handleChange("password", text)}
               />
-
-              <Text style={styles.label}>Password</Text>
-              <View style={{ position: "relative" }}>
-                <TextInput
-                  value={formData.password}
-                  style={[styles.input, { paddingRight: 40 }]}
-                  placeholder="********"
-                  placeholderTextColor="#888"
-                  secureTextEntry={!showPassword}
-                  onChangeText={(text) => handleChange("password", text)}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={{ position: "absolute", right: 10, top: 12 }}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={22}
-                    color={Colors.primary}
-                  />
-                </TouchableOpacity>
-              </View>
-
               <TouchableOpacity
-                style={styles.forgot}
-                onPress={() => navigation.navigate("ForgerPassword")}
+                onPress={() => setShowPassword(!showPassword)}
+                style={{ position: "absolute", right: 10, top: 12 }}
               >
-                <Text style={styles.forgotText}>Forgot password?</Text>
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={22}
+                  color={Colors.primary}
+                />
               </TouchableOpacity>
+            </View>
 
-              <TouchableOpacity
-                onPress={() => handleLogin()}
-                style={[
-                  styles.loginButton,
-                  (isLoading ||
-                    !isEmailValid ||
-                    !formData.email.trim() ||
-                    !formData.password.trim()) && { opacity: 0.6 },
-                ]}
-                disabled={
-                  isLoading ||
+            <TouchableOpacity
+              style={styles.forgot}
+              onPress={() => navigation.navigate("ForgerPassword")}
+            >
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => handleLogin()}
+              style={[
+                styles.loginButton,
+                (isLoading ||
                   !isEmailValid ||
                   !formData.email.trim() ||
-                  !formData.password.trim()
-                }
-              >
-                <Text style={styles.loginButtonText}>
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </Text>
-              </TouchableOpacity>
+                  !formData.password.trim()) && { opacity: 0.6 },
+              ]}
+              disabled={
+                isLoading ||
+                !isEmailValid ||
+                !formData.email.trim() ||
+                !formData.password.trim()
+              }
+            >
+              <Text style={styles.loginButtonText}>
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Text>
+            </TouchableOpacity>
 
-              <View style={styles.signupContainer}>
-                <Text>Don't have an account? </Text>
-                <TouchableOpacity onPress={() => router.push("/SignUpScreen")}>
-                  <Text style={styles.signupText}>Sign Up</Text>
-                </TouchableOpacity>
-              </View>
+            <View style={styles.signupContainer}>
+              <Text>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push("/SignUpScreen")}>
+                <Text style={styles.signupText}>Sign Up</Text>
+              </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </View>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </SafeAreaProvider>
   );

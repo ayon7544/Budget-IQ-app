@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -9,7 +8,8 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
-import { KeyboardAvoidingView, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import BackButton from "../components/UI/BackButton";
 import { Colors } from "../Constants/Colors";
@@ -68,10 +68,11 @@ const ForgotPassword = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
       >
         <BackButton style={styles.backButton} />
         <View style={styles.content}>
@@ -110,7 +111,7 @@ const ForgotPassword = () => {
             </Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };
@@ -187,6 +188,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal:24
+    paddingHorizontal: 24
   },
 });

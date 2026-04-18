@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,7 +10,8 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
-import { KeyboardAvoidingView, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import BackButton from "../components/UI/BackButton";
 import { Colors } from "../Constants/Colors";
 import { useResetPasswordMutation } from "../redux/services/api";
@@ -76,91 +76,91 @@ const NewPassword = () => {
   };
 
   return (
-    
-      <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
+    <SafeAreaView style={styles.container}>
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+      >
         <BackButton style={styles.backButton} />
-         <View style={styles.content}>
-        <Text style={styles.title}>New Password</Text>
-        <Text style={styles.subTitle}>Please enter your new password</Text>
+        <View style={styles.content}>
+          <Text style={styles.title}>New Password</Text>
+          <Text style={styles.subTitle}>Please enter your new password</Text>
 
-        {/* Password Input */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.passwordWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="********"
-              placeholderTextColor="#888"
-              secureTextEntry={!showPassword}
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
-            <Pressable
-              style={styles.eyeIcon}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Ionicons
-                name={showPassword ? "eye" : "eye-off"}
-                size={24}
-                color={Colors.primary}
+          {/* Password Input */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="********"
+                placeholderTextColor="#888"
+                secureTextEntry={!showPassword}
+                value={newPassword}
+                onChangeText={setNewPassword}
               />
-            </Pressable>
+              <Pressable
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons
+                  name={showPassword ? "eye" : "eye-off"}
+                  size={24}
+                  color={Colors.primary}
+                />
+              </Pressable>
+            </View>
           </View>
-        </View>
 
-        {/* Confirm Password Input */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Confirm Password</Text>
-          <View style={styles.passwordWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="********"
-              placeholderTextColor="#888"
-              secureTextEntry={!showConfirmPassword}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-            <Pressable
-              style={styles.eyeIcon}
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-            >
-              <Ionicons
-                name={showConfirmPassword ? "eye" : "eye-off"}
-                size={24}
-                color={Colors.primary}
+          {/* Confirm Password Input */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="********"
+                placeholderTextColor="#888"
+                secureTextEntry={!showConfirmPassword}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
               />
-            </Pressable>
+              <Pressable
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? "eye" : "eye-off"}
+                  size={24}
+                  color={Colors.primary}
+                />
+              </Pressable>
+            </View>
           </View>
-        </View>
 
-        {/* Update Button */}
-        <TouchableOpacity
-          style={[
-            styles.verifyButton,
-            (isLoading || !newPassword) && { opacity: 0.6 },
-          ]}
-          onPress={handleNext}
-          disabled={isLoading || !newPassword}
-        >
-          <Text style={styles.verifyText}>
-            {isLoading ? "Updating..." : "Update"}
-          </Text>
-        </TouchableOpacity>
+          {/* Update Button */}
+          <TouchableOpacity
+            style={[
+              styles.verifyButton,
+              (isLoading || !newPassword) && { opacity: 0.6 },
+            ]}
+            onPress={handleNext}
+            disabled={isLoading || !newPassword}
+          >
+            <Text style={styles.verifyText}>
+              {isLoading ? "Updating..." : "Update"}
+            </Text>
+          </TouchableOpacity>
         </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
   );
 };
 
 export default NewPassword;
 
 const styles = StyleSheet.create({
-   container: {
+  container: {
     flex: 1,
     backgroundColor: "#ffff",
     padding: 20,
@@ -229,10 +229,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     zIndex: 1,
   },
-   content: {
+  content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal:24
+    paddingHorizontal: 24
   },
 });

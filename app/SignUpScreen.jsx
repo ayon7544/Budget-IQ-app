@@ -3,26 +3,22 @@ import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import {
   SafeAreaProvider,
-  useSafeAreaInsets,
+  SafeAreaView,
 } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { Colors } from "../Constants/Colors";
 import { useSignUpMutation } from "../redux/services/api";
 
 const SignUpScreen = () => {
-  const insets = useSafeAreaInsets();
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -172,7 +168,7 @@ const SignUpScreen = () => {
         type: "error",
         position: "top",
         text1: "Sign Up Failed",
-        text2: serverMessage +" Click ResentOtp To get New Otp" || "Invalid input. Please check your data.",
+        text2: serverMessage + " Click ResentOtp To get New Otp" || "Invalid input. Please check your data.",
         visibilityTime: 3000,
         autoHide: true,
       });
@@ -191,144 +187,139 @@ const SignUpScreen = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.container}>
-              {/* Title of the screen */}
-              <Text style={styles.title}>Sign Up</Text>
+          <View style={styles.container}>
+            {/* Title of the screen */}
+            <Text style={styles.title}>Sign Up</Text>
 
-              {/* Full Name Input Group */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Name</Text>
+            {/* Full Name Input Group */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Full Name</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.fullName}
+                onChangeText={(value) => handleChange("fullName", value)}
+                placeholder="Enter your full name here..."
+                placeholderTextColor="#888"
+              />
+            </View>
+
+            {/* Email Input Group */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.email}
+                onChangeText={validateEmail}
+                placeholder="consultme@gmail.com"
+                placeholderTextColor="#888"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* Phone Number Input Group */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your phone number"
+                placeholderTextColor="#888"
+                keyboardType="phone-pad"
+                value={formData.contactNo}
+                onChangeText={(val) => handleChange("contactNo", val)}
+              />
+            </View>
+
+            {/* Password Input Group */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <View style={{ position: "relative" }}>
                 <TextInput
-                  style={styles.input}
-                  value={formData.fullName}
-                  onChangeText={(value) => handleChange("fullName", value)}
-                  placeholder="Enter your full name here..."
+                  style={[styles.input, { paddingRight: 40 }]}
+                  placeholder="********"
                   placeholderTextColor="#888"
+                  secureTextEntry={!showPassword}
+                  value={formData.password}
+                  onChangeText={(val) => handleChange("password", val)}
                 />
-              </View>
-
-              {/* Email Input Group */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.email}
-                  onChangeText={validateEmail}
-                  placeholder="consultme@gmail.com"
-                  placeholderTextColor="#888"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              {/* Phone Number Input Group */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone Number</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your phone number"
-                  placeholderTextColor="#888"
-                  keyboardType="phone-pad"
-                  value={formData.contactNo}
-                  onChangeText={(val) => handleChange("contactNo", val)}
-                />
-              </View>
-
-              {/* Password Input Group */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
-                <View style={{ position: "relative" }}>
-                  <TextInput
-                    style={[styles.input, { paddingRight: 40 }]}
-                    placeholder="********"
-                    placeholderTextColor="#888"
-                    secureTextEntry={!showPassword}
-                    value={formData.password}
-                    onChangeText={(val) => handleChange("password", val)}
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={{ position: "absolute", right: 10, top: 12 }}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={22}
+                    color={Colors.primary}
                   />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={{ position: "absolute", right: 10, top: 12 }}
-                  >
-                    <Ionicons
-                      name={showPassword ? "eye-off" : "eye"}
-                      size={22}
-                      color={Colors.primary}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Confirm Password Input Group */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Confirm Password</Text>
-                <View style={{ position: "relative" }}>
-                  <TextInput
-                    style={[styles.input, { paddingRight: 40 }]}
-                    placeholder="********"
-                    placeholderTextColor="#888"
-                    secureTextEntry={!showConfirmPassword}
-                    value={formData.confirmPassword}
-                    onChangeText={(val) => handleChange("confirmPassword", val)}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={{ position: "absolute", right: 10, top: 12 }}
-                  >
-                    <Ionicons
-                      name={showConfirmPassword ? "eye-off" : "eye"}
-                      size={22}
-                      color={Colors.primary}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Sign Up Button */}
-              <TouchableOpacity
-                style={[
-                  styles.signUpButton,
-                  (!validateForm() || isLoading) && { opacity: 0.6 },
-                ]}
-                onPress={handleSignUp}
-                disabled={!validateForm() || isLoading}
-              >
-                <Text style={styles.signUpButtonText}>
-                  {isLoading ? "Signing Up..." : "Sign Up"}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Social Sign-Up Buttons Container */}
-              <View style={styles.socialButtonsContainer}>
-                {/* Commented out social buttons as in original */}
-              </View>
-
-              {/* Login Link */}
-              <View style={styles.loginTextContainer}>
-                <Text style={styles.loginText}>I have an account? </Text>
-                <TouchableOpacity onPress={() => router.push("/LoginScreen")}>
-                  <Text style={styles.loginLink}>Log in</Text>
                 </TouchableOpacity>
               </View>
-
-              {isError && (
-                <Text style={{ color: "red", marginTop: 10 }}>
-                  Signup failed!
-                </Text>
-              )}
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+
+            {/* Confirm Password Input Group */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={{ position: "relative" }}>
+                <TextInput
+                  style={[styles.input, { paddingRight: 40 }]}
+                  placeholder="********"
+                  placeholderTextColor="#888"
+                  secureTextEntry={!showConfirmPassword}
+                  value={formData.confirmPassword}
+                  onChangeText={(val) => handleChange("confirmPassword", val)}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{ position: "absolute", right: 10, top: 12 }}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-off" : "eye"}
+                    size={22}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Sign Up Button */}
+            <TouchableOpacity
+              style={[
+                styles.signUpButton,
+                (!validateForm() || isLoading) && { opacity: 0.6 },
+              ]}
+              onPress={handleSignUp}
+              disabled={!validateForm() || isLoading}
+            >
+              <Text style={styles.signUpButtonText}>
+                {isLoading ? "Signing Up..." : "Sign Up"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Social Sign-Up Buttons Container */}
+            <View style={styles.socialButtonsContainer}>
+              {/* Commented out social buttons as in original */}
+            </View>
+
+            {/* Login Link */}
+            <View style={styles.loginTextContainer}>
+              <Text style={styles.loginText}>I have an account? </Text>
+              <TouchableOpacity onPress={() => router.push("/LoginScreen")}>
+                <Text style={styles.loginLink}>Log in</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isError && (
+              <Text style={{ color: "red", marginTop: 10 }}>
+                Signup failed!
+              </Text>
+            )}
+          </View>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </SafeAreaProvider>
   );

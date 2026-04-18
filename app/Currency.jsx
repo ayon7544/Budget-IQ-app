@@ -1,7 +1,6 @@
 import {
   FlatList,
   Image,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,6 +10,7 @@ import Toast from "react-native-toast-message";
 import { useState } from "react";
 import { useCurrencyMutation } from "../redux/services/api";
 import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const Currency = () => {
   const [currency, { isLoading }] = useCurrencyMutation();

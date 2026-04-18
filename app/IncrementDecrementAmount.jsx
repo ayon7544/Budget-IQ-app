@@ -10,10 +10,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Platform,
-  KeyboardAvoidingView,
 } from "react-native";
 import Toast from "react-native-toast-message";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import RemoteSvg from "../components/RemoteSvg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../Constants/Colors";
@@ -146,9 +145,11 @@ const IncrementDecrementAmount = () => {
   }
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
       >
         {/* Header */}
         <View style={styles.header}>
@@ -207,7 +208,7 @@ const IncrementDecrementAmount = () => {
             {transactionId ? "MODIFY TRANSACTION" : "ADD TRANSACTION"}
           </Text>
         </TouchableOpacity>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

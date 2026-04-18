@@ -26,11 +26,10 @@ import { Avatar } from "react-native-paper";
 
 import { selectApiSuccess } from "../../redux/slices/messageSlice";
 import {
-  KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
-  Platform,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const Index = () => {
   const router = useRouter();
@@ -152,9 +151,11 @@ const Index = () => {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.modalOverlay}>
@@ -222,7 +223,7 @@ const Index = () => {
               </View>
             </View>
           </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </Modal>
     </SafeAreaView>
   );
