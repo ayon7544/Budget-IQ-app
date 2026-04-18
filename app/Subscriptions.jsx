@@ -41,13 +41,13 @@ const buildPaymentPayload = (customerInfo, productIdentifier) => {
   const active = customerInfo.entitlements.active;
   const entitlementKey = Object.keys(active)[0];
   const entitlement = active[entitlementKey];
-  const productId = entitlement?.productIdentifier ?? productIdentifier; 
+  const productId = entitlement?.productIdentifier ?? productIdentifier;
   const subInfo =
     customerInfo.subscriptionsByProductIdentifier?.[productId] ?? {};
 
   return {
     sessionId: subInfo.storeTransactionId ?? `rc_session_${Date.now()}`,
-    amount: productId === "cat_monthly" ? 900 : 3600, 
+    amount: productId === "cat_monthly" ? 900 : 3600,
     currency: "BDT",
     paymentProvider: "google_play",
     transitionId: subInfo.storeTransactionId ?? `rc_txn_${Date.now()}`,
@@ -64,17 +64,38 @@ export default function Subscriptions() {
   const [packages, setPackages] = useState([]);
   const [offeringMap, setOfferingMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [billingUnavailable, setBillingUnavailable] = useState(false);
   const [selectedOfferingId, setSelectedOfferingId] = useState(null);
   const [purchasing, setPurchasing] = useState(false);
 
   useEffect(() => {
-    if (Platform.OS !== "android") return;
+    if (Platform.OS !== "android") {
+      setLoading(false);
+      return;
+    }
+
+    // Avoid noisy billing errors while running Android development builds.
+    if (__DEV__) {
+      setBillingUnavailable(true);
+      setLoading(false);
+      return;
+    }
 
     const init = async () => {
-      Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+      Purchases.setLogLevel(LOG_LEVEL.WARN);
       Purchases.configure({ apiKey: REVENUECAT_GOOGLE_API_KEY });
 
       try {
+        const canPay =
+          typeof Purchases.canMakePayments === "function"
+            ? await Purchases.canMakePayments()
+            : true;
+
+        if (!canPay) {
+          setBillingUnavailable(true);
+          return;
+        }
+
         const result = await Purchases.getOfferings();
         if (!result || Object.keys(result.all).length === 0)
           throw new Error("Empty");
@@ -92,7 +113,16 @@ export default function Subscriptions() {
         setOfferingMap(map);
         setPackages(pkgList);
       } catch (e) {
-        console.warn("Failed to fetch offerings:", e.message);
+        const message = e?.message || "Unable to load offerings";
+        if (
+          e?.code === "PurchaseNotAllowedError" ||
+          message.includes("BILLING_UNAVAILABLE") ||
+          message.includes("not allowed to make the purchase")
+        ) {
+          setBillingUnavailable(true);
+        } else {
+          console.warn("Failed to fetch offerings:", message);
+        }
       } finally {
         setLoading(false);
       }
@@ -102,6 +132,14 @@ export default function Subscriptions() {
   }, []);
 
   const handlePurchase = async () => {
+    if (billingUnavailable) {
+      Alert.alert(
+        "Billing unavailable",
+        "Google Play Billing is not available on this device/emulator.",
+      );
+      return;
+    }
+
     const originalPackage = offeringMap[selectedOfferingId];
     if (!originalPackage) return;
 
@@ -143,6 +181,14 @@ export default function Subscriptions() {
   };
 
   const handleRestore = async () => {
+    if (billingUnavailable) {
+      Alert.alert(
+        "Billing unavailable",
+        "Google Play Billing is not available on this device/emulator.",
+      );
+      return;
+    }
+
     try {
       setPurchasing(true);
       const customerInfo = await Purchases.restorePurchases();
@@ -171,7 +217,11 @@ export default function Subscriptions() {
   if (packages.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>No plans available right now.</Text>
+        <Text style={styles.errorText}>
+          {billingUnavailable
+            ? "Billing is unavailable on this emulator/device. Use a Play Store-enabled emulator or a real device."
+            : "No plans available right now."}
+        </Text>
       </View>
     );
   }
@@ -259,9 +309,10 @@ export default function Subscriptions() {
       <TouchableOpacity
         style={[
           styles.cta,
-          (!selectedOfferingId || purchasing) && styles.ctaDisabled,
+          (!selectedOfferingId || purchasing || billingUnavailable) &&
+          styles.ctaDisabled,
         ]}
-        disabled={!selectedOfferingId || purchasing}
+        disabled={!selectedOfferingId || purchasing || billingUnavailable}
         onPress={handlePurchase}
         activeOpacity={0.85}
       >

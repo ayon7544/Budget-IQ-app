@@ -2,8 +2,13 @@ import * as SecureStore from "expo-secure-store";
 
 // Save token and email
 export const saveAuthData = async (token, email) => {
-  await SecureStore.setItemAsync("accessToken", token);
-  await SecureStore.setItemAsync("userEmail", email);
+  if (typeof token === "string" && token.length > 0) {
+    await SecureStore.setItemAsync("accessToken", token);
+  }
+
+  if (typeof email === "string" && email.length > 0) {
+    await SecureStore.setItemAsync("userEmail", email);
+  }
 };
 
 // Get token
@@ -27,7 +32,7 @@ const REVIEW_KEY = "user_review_info";
 export const setReviewInfo = async (value) => {
   try {
     await SecureStore.setItemAsync(REVIEW_KEY, JSON.stringify(value));
-  } catch (e) {}
+  } catch (e) { }
 };
 
 // Get review info
@@ -50,7 +55,7 @@ export const saveSubscriptionViewTime = async () => {
       "subscriptionTimestamp",
       timestamp.toString()
     );
-  } catch (error) {}
+  } catch (error) { }
 };
 
 // Get last subscription view time

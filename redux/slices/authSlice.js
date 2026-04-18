@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { deleteAuthData, saveAuthData } from "../../utils/secureStore";
+import { deleteAuthData } from "../../utils/secureStore";
 
 
 const authSlice = createSlice({
@@ -8,7 +8,6 @@ const authSlice = createSlice({
   reducers: {
     setToken: (state, action) => {
       state.token = action.payload;
-      saveAuthData(action.payload); // persist securely
     },
     clearToken: (state) => {
       state.token = null;
