@@ -60,6 +60,10 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+
+credentials.json
+@ayonghosh__budget-iq.jks
+
 # Metro
 .metro-health-check*
 

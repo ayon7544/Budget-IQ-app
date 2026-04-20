@@ -10,73 +10,192 @@ import {
   Alert,
 } from "react-native";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
-import { useCreatePaymentMutation } from "../redux/services/api";
 
-const REVENUECAT_GOOGLE_API_KEY = "goog_DJMtUKOXHmVGiKAtFpzBNdploRu";
+const REVENUECAT_GOOGLE_API_KEY = "goog_RHyMIIcFPPRycIdmTcwllyvMnDJ";
+const ACCENT = "#00C896";
 
-const PLAN_META = {
-  monthly_standard: {
-    emoji: "⚡",
-    accent: "#00C896",
-    tag: "POPULAR",
-    period: "per month",
-    membershipPlanId: "monthly_standard_plan_001",
+const LOCAL_FREE_PLAN_RESPONSE = {
+  identifier: "$rc_free_plan",
+  offeringIdentifier: "local_free",
+  packageType: "CUSTOM",
+  presentedOfferingContext: {
+    offeringIdentifier: "local_free",
+    placementIdentifier: null,
+    targetingContext: null,
   },
-  premium_subscription: {
-    emoji: "👑",
-    accent: "#7C5CFC",
-    tag: "BEST VALUE",
-    period: "per year",
-    membershipPlanId: "premium_subscription_plan_001",
+  product: {
+    identifier: "budgetiq_free_plan",
+    title: "Free Plan",
+    description:
+      "Start managing your money with smart AI support - completely free.",
+    price: 0,
+    priceString: "Free",
+    currencyCode: "BDT",
+  },
+  webCheckoutUrl: null,
+};
+
+const FALLBACK_CONTENT = {
+  FREE: {
+    title: "Free Plan",
+    description:
+      "Start managing your money with smart AI support - completely free.",
+    badge: "FREE",
+    benefits: [
+      "Track daily expenses (simple & fast)",
+      "Basic AI insights on spending habits",
+      "Simple reports to understand your money",
+      "Limited usage access",
+    ],
+  },
+  MONTHLY: {
+    title: "Monthly Plan",
+    description:
+      "Unlock unlimited AI insights and take full control of your finances.",
+    badge: "MOST POPULAR",
+    benefits: [
+      "Unlimited expense tracking",
+      "Full AI-powered recommendations",
+      "Advanced reports & analytics",
+      "Full access for 30 days",
+    ],
+  },
+  ANNUAL: {
+    title: "Yearly Plan",
+    description:
+      "Build long-term financial habits and save more with full-year access.",
+    badge: "BEST VALUE",
+    benefits: [
+      "Everything in Monthly plan",
+      "Unlimited AI usage",
+      "Long-term financial insights",
+      "Full access for 1 year (save more)",
+    ],
   },
 };
 
-// Map entitlement → your API's membershipPlanId
-const ENTITLEMENT_TO_PLAN = {
-  "Standard Android": "monthly_standard_plan_001",
-  "Premium Android": "premium_subscription_plan_001",
+const getPlanDisplayTitle = (plan) => {
+  if (plan.source === "local_free") return FALLBACK_CONTENT.FREE.title;
+
+  const rawTitle = (plan.title || "")
+    .replace(/unreviewed/gi, "")
+    .replace(/[()]/g, "")
+    .replace(/com\.[^\s]+/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (rawTitle) return rawTitle;
+
+  if (plan.packageType === "ANNUAL") return "Yearly Plan";
+  if (plan.packageType === "MONTHLY") return "Monthly Plan";
+  return "Premium Plan";
 };
 
-const buildPaymentPayload = (customerInfo, productIdentifier) => {
-  const active = customerInfo.entitlements.active;
-  const entitlementKey = Object.keys(active)[0];
-  const entitlement = active[entitlementKey];
-  const productId = entitlement?.productIdentifier ?? productIdentifier;
-  const subInfo =
-    customerInfo.subscriptionsByProductIdentifier?.[productId] ?? {};
+const getPlanDescription = (plan) => {
+  const trimmedStoreDescription = (plan.summaryDescription || "").trim();
+  if (trimmedStoreDescription) return trimmedStoreDescription;
 
-  return {
-    sessionId: subInfo.storeTransactionId ?? `rc_session_${Date.now()}`,
-    amount: productId === "cat_monthly" ? 900 : 3600,
-    currency: "BDT",
-    paymentProvider: "google_play",
-    transitionId: subInfo.storeTransactionId ?? `rc_txn_${Date.now()}`,
-    startDate: entitlement?.originalPurchaseDate ?? new Date().toISOString(),
-    endDate:
-      entitlement?.expirationDate ??
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    membershipPlanId: ENTITLEMENT_TO_PLAN[entitlementKey] ?? "unknown_plan",
-  };
+  if (plan.source === "local_free") return FALLBACK_CONTENT.FREE.description;
+
+  // Fallback to hardcoded content based on package type
+  if (plan.packageType === "ANNUAL") return FALLBACK_CONTENT.ANNUAL.description;
+  if (plan.packageType === "MONTHLY") return FALLBACK_CONTENT.MONTHLY.description;
+
+  return "";
+};
+
+const getPlanBadge = (plan) => {
+  if (plan.source === "local_free") return FALLBACK_CONTENT.FREE.badge;
+  if (plan.packageType === "ANNUAL") return FALLBACK_CONTENT.ANNUAL.badge;
+  if (plan.packageType === "MONTHLY") return FALLBACK_CONTENT.MONTHLY.badge;
+  return "PAID PLAN";
+};
+
+const getPlanBenefits = (plan) => {
+  if (Array.isArray(plan.benefits) && plan.benefits.length > 0) {
+    return plan.benefits;
+  }
+
+  if (plan.source === "local_free") return FALLBACK_CONTENT.FREE.benefits;
+
+  // Fallback to hardcoded benefits based on package type
+  if (plan.packageType === "ANNUAL") return FALLBACK_CONTENT.ANNUAL.benefits;
+  if (plan.packageType === "MONTHLY") return FALLBACK_CONTENT.MONTHLY.benefits;
+
+  return [];
+};
+
+const extractBenefitsFromMetadata = (metadata, packageType) => {
+  if (!metadata || typeof metadata !== "object") return [];
+
+  const normalizedType = (packageType || "").toLowerCase();
+  const typedKeys = [
+    `benefits_${normalizedType}`,
+    `features_${normalizedType}`,
+    `${normalizedType}_benefits`,
+    `${normalizedType}_features`,
+  ];
+
+  for (const key of typedKeys) {
+    const value = metadata[key];
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+    if (typeof value === "string") {
+      return value
+        .split(/\n|\||,/)
+        .map((item) => item.replace(/^[-*•\s]+/, "").trim())
+        .filter(Boolean);
+    }
+  }
+
+  const benefitKeys = ["benefits", "features", "feature_list"];
+  for (const key of benefitKeys) {
+    const value = metadata[key];
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+    if (typeof value === "string") {
+      return value
+        .split(/\n|\||,/)
+        .map((item) => item.replace(/^[-*•\s]+/, "").trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
+const parseDescription = (descriptionText) => {
+  const cleaned = (descriptionText || "").trim();
+  if (!cleaned) return { summary: "", benefits: [] };
+
+  const lines = cleaned
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length <= 1) {
+    return { summary: cleaned, benefits: [] };
+  }
+
+  const summary = lines[0];
+  const benefits = lines
+    .slice(1)
+    .map((line) => line.replace(/^[-*•\d.)\s]+/, "").trim())
+    .filter(Boolean);
+
+  return { summary, benefits };
 };
 
 export default function Subscriptions() {
-  const [createPayment] = useCreatePaymentMutation();
-  const [packages, setPackages] = useState([]);
-  const [offeringMap, setOfferingMap] = useState({});
+  const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [selectedOfferingId, setSelectedOfferingId] = useState(null);
-  const [purchasing, setPurchasing] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [selectedPlanKey, setSelectedPlanKey] = useState(null);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (Platform.OS !== "android") {
-      setLoading(false);
-      return;
-    }
-
-    // Avoid noisy billing errors while running Android development builds.
-    if (__DEV__) {
-      setBillingUnavailable(true);
       setLoading(false);
       return;
     }
@@ -86,43 +205,64 @@ export default function Subscriptions() {
       Purchases.configure({ apiKey: REVENUECAT_GOOGLE_API_KEY });
 
       try {
-        const canPay =
-          typeof Purchases.canMakePayments === "function"
-            ? await Purchases.canMakePayments()
-            : true;
-
-        if (!canPay) {
-          setBillingUnavailable(true);
-          return;
+        const result = await Purchases.getOfferings();
+        if (!result || Object.keys(result.all).length === 0) {
+          throw new Error("Empty");
         }
 
-        const result = await Purchases.getOfferings();
-        if (!result || Object.keys(result.all).length === 0)
-          throw new Error("Empty");
+        const allPlans = [];
+        const offeringsToRender = Object.values(result.all || {});
 
-        const map = {};
-        const pkgList = [];
+        offeringsToRender.forEach((offering) => {
+          (offering.availablePackages || []).forEach((pkg) => {
+            const parsedDescription = parseDescription(pkg.product.description);
+            const metadataBenefits = extractBenefitsFromMetadata(
+              offering.metadata,
+              pkg.packageType,
+            );
 
-        Object.values(result.all).forEach((offering) => {
-          offering.availablePackages.forEach((pkg) => {
-            map[offering.identifier] = pkg;
-            pkgList.push({ offeringId: offering.identifier, pkg });
+            allPlans.push({
+              key: `${offering.identifier}:${pkg.identifier}:${pkg.product.identifier}`,
+              source: "revenuecat",
+              offeringId: offering.identifier,
+              packageId: pkg.identifier,
+              productId: pkg.product.identifier,
+              title: pkg.product.title,
+              description: pkg.product.description,
+              summaryDescription: parsedDescription.summary,
+              price: pkg.product.priceString,
+              packageType: pkg.packageType,
+              rcPackage: pkg,
+              benefits:
+                metadataBenefits.length > 0
+                  ? metadataBenefits
+                  : parsedDescription.benefits,
+            });
           });
         });
 
-        setOfferingMap(map);
-        setPackages(pkgList);
+        allPlans.push({
+          key: "local_free:plan",
+          source: "local_free",
+          offeringId: LOCAL_FREE_PLAN_RESPONSE.offeringIdentifier,
+          packageId: LOCAL_FREE_PLAN_RESPONSE.identifier,
+          productId: LOCAL_FREE_PLAN_RESPONSE.product.identifier,
+          title: LOCAL_FREE_PLAN_RESPONSE.product.title,
+          description: LOCAL_FREE_PLAN_RESPONSE.product.description,
+          summaryDescription: LOCAL_FREE_PLAN_RESPONSE.product.description,
+          price: LOCAL_FREE_PLAN_RESPONSE.product.priceString,
+          packageType: LOCAL_FREE_PLAN_RESPONSE.packageType,
+          rcLikeResponse: LOCAL_FREE_PLAN_RESPONSE,
+          benefits: FALLBACK_CONTENT.FREE.benefits,
+          isFeatured: true,
+        });
+
+        setPlans(allPlans);
+        setSelectedPlanKey(allPlans[0]?.key ?? null);
       } catch (e) {
         const message = e?.message || "Unable to load offerings";
-        if (
-          e?.code === "PurchaseNotAllowedError" ||
-          message.includes("BILLING_UNAVAILABLE") ||
-          message.includes("not allowed to make the purchase")
-        ) {
-          setBillingUnavailable(true);
-        } else {
-          console.warn("Failed to fetch offerings:", message);
-        }
+        setLoadError(message);
+        console.warn("Failed to fetch offerings:", message);
       } finally {
         setLoading(false);
       }
@@ -131,77 +271,80 @@ export default function Subscriptions() {
     init();
   }, []);
 
-  const handlePurchase = async () => {
-    if (billingUnavailable) {
+  const onPlanPress = (plan) => {
+    setSelectedPlanKey(plan.key);
+  };
+
+  const handleContinue = async () => {
+    const selectedPlan = plans.find((plan) => plan.key === selectedPlanKey);
+    if (!selectedPlan || processing) return;
+
+    if (selectedPlan.source === "revenuecat" && !selectedPlan.rcPackage) {
       Alert.alert(
-        "Billing unavailable",
-        "Google Play Billing is not available on this device/emulator.",
+        "Plan unavailable",
+        "This subscription package is not available right now.",
       );
       return;
     }
 
-    const originalPackage = offeringMap[selectedOfferingId];
-    if (!originalPackage) return;
+    if (selectedPlan.source === "local_free") {
+      const now = Date.now();
+      const freePlanActivationResponse = {
+        customerInfo: {
+          entitlements: {
+            active: {
+              LocalFreePlan: {
+                productIdentifier: selectedPlan.productId,
+                purchaseDate: new Date(now).toISOString(),
+                expirationDate: null,
+              },
+            },
+          },
+        },
+        productIdentifier: selectedPlan.productId,
+        source: "local_free",
+      };
+      Alert.alert("Free Plan Activated", "You are now using the Free plan.");
+      return;
+    }
 
     try {
-      setPurchasing(true);
-
-      const { customerInfo, productIdentifier } =
-        await Purchases.purchasePackage(originalPackage);
-
-      console.log("✅ Purchase successful");
-      console.log("📦 Product purchased:", productIdentifier);
-      console.log(
-        "🔑 Active entitlements:",
-        JSON.stringify(customerInfo.entitlements.active, null, 2),
+      setProcessing(true);
+      const purchaseResponse = await Purchases.purchasePackage(
+        selectedPlan.rcPackage,
       );
-
-      const active = customerInfo.entitlements.active;
-
-      if (Object.keys(active).length > 0) {
-        // Build and send payment payload to your API
-        const payload = buildPaymentPayload(customerInfo, productIdentifier);
-        console.log("📦 Payment payload:", JSON.stringify(payload, null, 2));
-
-        const apiResponse = await createPayment(payload).unwrap();
-        console.log("✅ API response:", JSON.stringify(apiResponse, null, 2));
-
-        Alert.alert("Success", "You're now subscribed!");
-      }
+      console.log(
+        "Purchase response:",
+        JSON.stringify(purchaseResponse, null, 2),
+      );
+      Alert.alert("Success", "Subscription purchased successfully.");
     } catch (e) {
-      if (!e.userCancelled) {
-        console.log("❌ Purchase error:", e.message);
-        Alert.alert("Purchase failed", e.message);
-      } else {
-        console.log("🚫 User cancelled purchase");
+      if (!e?.userCancelled) {
+        const errorMessage = e?.message || "Something went wrong.";
+        if (/could not be found|not found/i.test(errorMessage)) {
+          Alert.alert(
+            "Purchase unavailable",
+            "The selected item could not be found in Google Play for this build. Make sure the app is installed from an internal test or production track, and that the subscription is active and published for this account.",
+          );
+          return;
+        }
+
+        Alert.alert("Purchase failed", errorMessage);
       }
     } finally {
-      setPurchasing(false);
+      setProcessing(false);
     }
   };
 
   const handleRestore = async () => {
-    if (billingUnavailable) {
-      Alert.alert(
-        "Billing unavailable",
-        "Google Play Billing is not available on this device/emulator.",
-      );
-      return;
-    }
-
     try {
-      setPurchasing(true);
-      const customerInfo = await Purchases.restorePurchases();
-      const active = customerInfo.entitlements.active;
-      if (Object.keys(active).length > 0) {
-        Alert.alert("Restored", "Your purchases have been restored.");
-      } else {
-        Alert.alert("Nothing to restore", "No previous purchases found.");
-      }
+      setProcessing(true);
+      const restoreResponse = await Purchases.restorePurchases();
+      Alert.alert("Restore complete", "Purchases restored.");
     } catch (e) {
-      Alert.alert("Restore failed", e.message);
+      Alert.alert("Restore failed", e?.message || "Something went wrong.");
     } finally {
-      setPurchasing(false);
+      setProcessing(false);
     }
   };
 
@@ -214,13 +357,13 @@ export default function Subscriptions() {
     );
   }
 
-  if (packages.length === 0) {
+  if (plans.length === 0) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>
-          {billingUnavailable
-            ? "Billing is unavailable on this emulator/device. Use a Play Store-enabled emulator or a real device."
-            : "No plans available right now."}
+          {loadError
+            ? `Unable to load plans: ${loadError}`
+            : "No plans available right now. Set a Current Offering in RevenueCat and attach packages."}
         </Text>
       </View>
     );
@@ -232,230 +375,207 @@ export default function Subscriptions() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <View style={styles.pillBadge}>
-          <Text style={styles.pillText}>UPGRADE</Text>
-        </View>
-        <Text style={styles.headline}>Choose your{"\n"}plan</Text>
-        <Text style={styles.subheadline}>
-          Unlock the full power of BudgetIQ
-        </Text>
+      <View style={styles.headerWrap}>
+        <Text style={styles.heading}>Choose your plan</Text>
+        <Text style={styles.subHeading}>Flexible pricing for every budget.</Text>
       </View>
 
-      <View style={styles.cards}>
-        {packages.map(({ offeringId, pkg }) => {
-          const meta = PLAN_META[offeringId] ?? {
-            emoji: "✦",
-            accent: "#00C896",
-            tag: null,
-            period: "",
-          };
-          const isSelected = selectedOfferingId === offeringId;
-
-          return (
-            <TouchableOpacity
-              key={offeringId}
-              activeOpacity={0.88}
-              onPress={() => setSelectedOfferingId(offeringId)}
-              style={[
-                styles.card,
-                isSelected && { borderColor: meta.accent, borderWidth: 2 },
-              ]}
-            >
-              <View style={styles.cardTop}>
-                <View
-                  style={[
-                    styles.emojiWrap,
-                    { backgroundColor: meta.accent + "18" },
-                  ]}
-                >
-                  <Text style={styles.emoji}>{meta.emoji}</Text>
+      {plans.map((plan) => {
+        const isSelected = selectedPlanKey === plan.key;
+        const isLocalFree = plan.source === "local_free";
+        const displayTitle = getPlanDisplayTitle(plan);
+        const description = getPlanDescription(plan);
+        const benefits = getPlanBenefits(plan);
+        const badgeText = getPlanBadge(plan);
+        return (
+          <TouchableOpacity
+            key={plan.key}
+            activeOpacity={0.9}
+            onPress={() => onPlanPress(plan)}
+            style={[
+              styles.planItem,
+              isSelected && styles.planItemSelected,
+              isLocalFree && styles.localTrialCard,
+            ]}
+          >
+            <View style={styles.titleRow}>
+              <Text style={styles.planTitle}>{displayTitle}</Text>
+              {isLocalFree ? (
+                <View style={styles.badgeFeatured}>
+                  <Text style={styles.badgeText}>{badgeText}</Text>
                 </View>
-                <View style={styles.cardTopRight}>
-                  {meta.tag && (
-                    <View
-                      style={[styles.tag, { backgroundColor: meta.accent }]}
-                    >
-                      <Text style={styles.tagText}>{meta.tag}</Text>
-                    </View>
-                  )}
-                  {isSelected && (
-                    <View
-                      style={[
-                        styles.checkCircle,
-                        { backgroundColor: meta.accent },
-                      ]}
-                    >
-                      <Text style={styles.checkMark}>✓</Text>
-                    </View>
-                  )}
+              ) : (
+                <View style={styles.badgeStandard}>
+                  <Text style={styles.badgeText}>{badgeText}</Text>
                 </View>
+              )}
+            </View>
+            {!!description && (
+              <Text style={styles.planDescription}>{description}</Text>
+            )}
+            <Text style={styles.planPrice}>{plan.price}</Text>
+            {benefits.length > 0 && (
+              <View style={styles.benefitsWrap}>
+                {benefits.map((benefit) => (
+                  <View key={`${plan.key}-${benefit}`} style={styles.benefitRow}>
+                    <Text style={styles.benefitDot}>•</Text>
+                    <Text style={styles.benefitText}>{benefit}</Text>
+                  </View>
+                ))}
               </View>
-
-              <Text style={styles.cardTitle}>
-                {pkg.product.title?.split("(")[0].trim()}
-              </Text>
-              <View style={styles.priceRow}>
-                <Text style={[styles.price, { color: meta.accent }]}>
-                  {pkg.product.priceString}
-                </Text>
-                <Text style={styles.period}> / {meta.period}</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+            )}
+          </TouchableOpacity>
+        );
+      })}
 
       <TouchableOpacity
         style={[
-          styles.cta,
-          (!selectedOfferingId || purchasing || billingUnavailable) &&
-          styles.ctaDisabled,
+          styles.primaryButton,
+          (!selectedPlanKey || processing) && styles.primaryButtonDisabled,
         ]}
-        disabled={!selectedOfferingId || purchasing || billingUnavailable}
-        onPress={handlePurchase}
-        activeOpacity={0.85}
+        disabled={!selectedPlanKey || processing}
+        onPress={handleContinue}
       >
-        {purchasing ? (
+        {processing ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text
-            style={[styles.ctaText, !selectedOfferingId && styles.ctaTextMuted]}
-          >
-            {selectedOfferingId ? "Continue" : "Select a plan"}
-          </Text>
+          <Text style={styles.primaryButtonText}>Continue</Text>
         )}
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.restoreBtn}
+        style={styles.restoreButton}
         onPress={handleRestore}
-        disabled={purchasing}
+        disabled={processing}
       >
         <Text style={styles.restoreText}>Restore purchases</Text>
       </TouchableOpacity>
-
-      <Text style={styles.legalText}>
-        Subscriptions auto-renew unless cancelled. Cancel anytime.
-      </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F7F7" },
-  content: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 48 },
+  container: { flex: 1, backgroundColor: "#F6F8FB" },
+  content: { paddingHorizontal: 16, paddingTop: 22, paddingBottom: 28 },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F7F7F7",
-    gap: 14,
+    padding: 16,
+    backgroundColor: "#F6F8FB",
   },
-  loadingText: { color: "#999", fontSize: 14, fontWeight: "500" },
-  errorText: { color: "#aaa", fontSize: 14 },
-  header: { marginBottom: 36 },
-  pillBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#EFEFEF",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-  pillText: {
-    color: "#999",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
-  headline: {
-    fontSize: 40,
+  loadingText: { fontSize: 14, color: "#555", marginTop: 10 },
+  errorText: { fontSize: 14, color: "#B00020", textAlign: "center" },
+  headerWrap: { marginBottom: 16 },
+  heading: {
+    fontSize: 28,
     fontWeight: "800",
+    marginBottom: 6,
     color: "#111",
-    lineHeight: 46,
-    marginBottom: 10,
-    letterSpacing: -1,
   },
-  subheadline: { fontSize: 16, color: "#999", fontWeight: "400" },
-  cards: { gap: 16, marginBottom: 32 },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 22,
+  subHeading: {
+    fontSize: 14,
+    color: "#5A6472",
+  },
+  planItem: {
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E8E8E8",
+    borderColor: "#E2E8F0",
+    backgroundColor: "#fff",
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
-  cardTop: {
+  planItemSelected: {
+    borderColor: ACCENT,
+    borderWidth: 2,
+  },
+  localTrialCard: {
+    backgroundColor: "#F0FDF9",
+    borderColor: "#B9F2E2",
+  },
+  titleRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  cardTopRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  emojiWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+  badgeFeatured: {
+    backgroundColor: ACCENT,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
-  emoji: { fontSize: 22 },
-  tag: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  tagText: { color: "#fff", fontSize: 9, fontWeight: "800", letterSpacing: 1 },
-  checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+  badgeStandard: {
+    backgroundColor: "#E2E8F0",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
-  checkMark: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#111",
-    marginBottom: 6,
-    letterSpacing: -0.3,
-  },
-  priceRow: { flexDirection: "row", alignItems: "baseline" },
-  price: { fontSize: 30, fontWeight: "800", letterSpacing: -0.5 },
-  period: { fontSize: 14, color: "#bbb", fontWeight: "500" },
-  cta: {
-    backgroundColor: "#00C896",
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: "center",
-    marginBottom: 16,
-    minHeight: 56,
-    justifyContent: "center",
-  },
-  ctaDisabled: { backgroundColor: "#E8E8E8" },
-  ctaText: {
+  badgeText: { fontSize: 10, fontWeight: "700", color: "#0F172A" },
+  planTitle: {
     fontSize: 16,
     fontWeight: "700",
+    color: "#0F172A",
+    flex: 1,
+    paddingRight: 8,
+  },
+  planDescription: { fontSize: 13, color: "#475569", marginBottom: 8 },
+  planPrice: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 10,
+  },
+  benefitsWrap: {
+    marginTop: 2,
+    gap: 4,
+  },
+  benefitRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  benefitDot: {
+    color: "#0F172A",
+    fontSize: 12,
+    lineHeight: 18,
+    marginRight: 6,
+  },
+  benefitText: {
+    flex: 1,
+    fontSize: 12,
+    color: "#64748B",
+    lineHeight: 18,
+  },
+  primaryButton: {
+    backgroundColor: ACCENT,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 52,
+    marginTop: 10,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.5,
+  },
+  primaryButtonText: {
     color: "#fff",
-    letterSpacing: 0.3,
+    fontSize: 16,
+    fontWeight: "700",
   },
-  ctaTextMuted: { color: "#bbb" },
-  restoreBtn: { alignItems: "center", paddingVertical: 12, marginBottom: 16 },
+  restoreButton: {
+    marginTop: 14,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
   restoreText: {
-    color: "#bbb",
+    color: "#64748B",
     fontSize: 13,
-    fontWeight: "500",
     textDecorationLine: "underline",
-  },
-  legalText: {
-    textAlign: "center",
-    fontSize: 11,
-    color: "#ccc",
-    lineHeight: 16,
   },
 });
