@@ -1,19 +1,41 @@
 import { Stack } from "expo-router";
-import { StatusBar, LogBox } from "react-native";
+import { StatusBar, LogBox, Platform } from "react-native";
 import { Provider } from "react-redux";
 import Toast from "react-native-toast-message";
-
+import Purchases, { LOG_LEVEL } from "react-native-purchases";
 import { store } from "../redux/store";
-
+import { useEffect } from "react";
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 LogBox.ignoreAllLogs(true);
 
 export default function RootLayout() {
+  useEffect(() => {
+    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    if (Platform.OS === "ios") {
+      Purchases.configure({
+        apiKey: "appl_ySQmjZPhKyvVPxntosvJVzQfjUi",
+      });
+    }
+    getOfferings();
+    getCustomerInfo();
+  }, [])
+
   const defaultHeader = {
     headerTitleAlign: "center",
     headerShadowVisible: false,
     headerTintColor: "#000",
     headerBackTitle: "",
   };
+
+
+  async function getCustomerInfo() {
+    const customerInfo = await Purchases.getCustomerInfo();
+    console.log("Customer Info:", JSON.stringify(customerInfo, null, 2));
+  }
+  async function getOfferings(){
+    const offerings = await Purchases.getOfferings()
+    if(offerings.current!==null && offerings.current.availablePackages.length!==0){console.log("Offerings",JSON.stringify(offerings,null,2))}
+  }
 
   const hiddenHeader = { headerShown: false };
 
