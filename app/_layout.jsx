@@ -1,16 +1,30 @@
 import { Stack } from "expo-router";
-import { StatusBar, LogBox, Platform } from "react-native";
+import {
+  Pressable,
+  StatusBar,
+  LogBox,
+  Platform,
+  UIManager,
+  View,
+} from "react-native";
 import { Provider } from "react-redux";
 import Toast from "react-native-toast-message";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
 import { store } from "../redux/store";
 import { useEffect } from "react";
-import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+import { Ionicons } from "@expo/vector-icons";
 LogBox.ignoreAllLogs(true);
 
 export default function RootLayout() {
   useEffect(() => {
-    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    if (
+      Platform.OS === "android" &&
+      UIManager.setLayoutAnimationEnabledExperimental
+    ) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+
+    Purchases.setLogLevel(LOG_LEVEL.ERROR);
     if (Platform.OS === "ios") {
       Purchases.configure({
         apiKey: "appl_ySQmjZPhKyvVPxntosvJVzQfjUi",
@@ -25,16 +39,16 @@ export default function RootLayout() {
     headerShadowVisible: false,
     headerTintColor: "#000",
     headerBackTitle: "",
+    headerBackTitleVisible: false,
+    headerBackButtonDisplayMode: "minimal",
   };
 
 
   async function getCustomerInfo() {
     const customerInfo = await Purchases.getCustomerInfo();
-    console.log("Customer Info:", JSON.stringify(customerInfo, null, 2));
   }
-  async function getOfferings(){
+  async function getOfferings() {
     const offerings = await Purchases.getOfferings()
-    if(offerings.current!==null && offerings.current.availablePackages.length!==0){console.log("Offerings",JSON.stringify(offerings,null,2))}
   }
 
   const hiddenHeader = { headerShown: false };
@@ -43,7 +57,14 @@ export default function RootLayout() {
     <Provider store={store}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
-      <Stack>
+      <Stack
+        screenOptions={{
+          animation: "slide_from_right",
+          animationDuration: 250,
+          gestureEnabled: true,
+          contentStyle: { backgroundColor: "#fff" },
+        }}
+      >
         {/* Initial Screens */}
         <Stack.Screen name="index" options={hiddenHeader} />
         <Stack.Screen name="InitialScreen" options={hiddenHeader} />
@@ -112,20 +133,36 @@ export default function RootLayout() {
         {/* Categories */}
         <Stack.Screen
           name="ExpenseCategories"
-          options={{
+          options={({ navigation }) => ({
             ...defaultHeader,
             title: "Expense Categories",
+            headerBackVisible: false,
             headerTitleStyle: { fontWeight: "600" },
-          }}
+            headerLeft: () => (
+              <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+                <View style={{ paddingHorizontal: 4 }}>
+                  <Ionicons name="chevron-back" size={26} color="#000" />
+                </View>
+              </Pressable>
+            ),
+          })}
         />
 
         <Stack.Screen
           name="IncomeCategories"
-          options={{
+          options={({ navigation }) => ({
             ...defaultHeader,
             title: "Income Categories",
+            headerBackVisible: false,
             headerTitleStyle: { fontWeight: "600" },
-          }}
+            headerLeft: () => (
+              <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+                <View style={{ paddingHorizontal: 4 }}>
+                  <Ionicons name="chevron-back" size={26} color="#000" />
+                </View>
+              </Pressable>
+            ),
+          })}
         />
       </Stack>
 

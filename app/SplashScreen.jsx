@@ -17,7 +17,7 @@ export default function SplashScreenComponent() {
     const init = async () => {
       try {
         const storedToken = await getToken();
-
+        console.log(storedToken)
         if (storedToken) {
           // ✅ User is logged in — load token into Redux
           dispatch(loadTokenFromStorage(storedToken));

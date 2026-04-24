@@ -62,7 +62,7 @@ const SettingScreen = () => {
       dispatch(clearToken());
       dispatch(removeApiSuccess());
       router.replace("/LoginScreen");
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const menuItems = [
@@ -92,7 +92,7 @@ const SettingScreen = () => {
     },
     {
       name: "ReviewTheApp",
-      icon: <AntDesign name="like1" size={20} color="black" />,
+      icon: <AntDesign name="like2" size={20} color="black" />,
       label: "Review The App",
     },
     {
@@ -118,7 +118,7 @@ const SettingScreen = () => {
                 dispatch(clearToken());
                 dispatch(removeApiSuccess());
                 router.push("/SignUpScreen");
-              } catch (e) {}
+              } catch (e) { }
             },
           },
         ],

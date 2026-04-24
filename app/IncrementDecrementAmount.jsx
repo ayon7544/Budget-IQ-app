@@ -4,6 +4,8 @@ import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -137,7 +139,6 @@ const IncrementDecrementAmount = () => {
         router.push("/(tabs)/DashboardScreen");
       }
     } catch (error) {
-      console.error(error);
     }
   };
   if (userLoading) {
@@ -145,70 +146,79 @@ const IncrementDecrementAmount = () => {
   }
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAwareScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        enableOnAndroid
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoider}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </Pressable>
-          {console.log(image)}
-          <View style={styles.headerButtonText}>
-            <View style={{ marginRight: 8, backgroundColor: "#E0F2E9" }}>
-              {image?.endsWith(".svg") ? (
-                <RemoteSvg uri={image} width={40} height={40} />
-              ) : (
-                <Image
-                  source={{ uri: image }}
-                  resizeMode="cover"
-                  style={styles.iconImage}
-                />
-              )}
+        <KeyboardAwareScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
+          enableAutomaticScroll
+          extraHeight={120}
+          extraScrollHeight={Platform.OS === "ios" ? 20 : 90}
+        >
+          <View>
+            <View style={styles.header}>
+              <Pressable onPress={() => navigation.goBack()}>
+                <Ionicons name="arrow-back" size={24} color="white" />
+              </Pressable>
+              <View style={styles.headerButtonText}>
+                <View style={{ marginRight: 8, backgroundColor: "#E0F2E9" }}>
+                  {image?.endsWith(".svg") ? (
+                    <RemoteSvg uri={image} width={40} height={40} />
+                  ) : (
+                    <Image
+                      source={{ uri: image }}
+                      resizeMode="cover"
+                      style={styles.iconImage}
+                    />
+                  )}
+                </View>
+                <Text style={styles.headerText}>{name}</Text>
+              </View>
             </View>
-            <Text style={styles.headerText}>{name}</Text>
+
+            {/* Amount */}
+            <View style={styles.row}>
+              <View style={styles.label}>
+                <FontAwesome5 name="money-bill-wave" size={16} />
+                <Text style={styles.labelText}> Amount</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                value={amount}
+                onChangeText={(text) => {
+                  const numericValue = text.replace(/[^0-9]/g, "");
+                  setAmount(numericValue);
+                }}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* Date */}
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) setDate(selectedDate);
+                }}
+              />
+            )}
           </View>
-        </View>
 
-        {/* Amount */}
-        <View style={styles.row}>
-          <View style={styles.label}>
-            <FontAwesome5 name="money-bill-wave" size={16} />
-            <Text style={styles.labelText}> Amount</Text>
-          </View>
-          <TextInput
-            style={styles.input}
-            value={amount}
-            onChangeText={(text) => {
-              const numericValue = text.replace(/[^0-9]/g, "");
-              setAmount(numericValue);
-            }}
-            keyboardType="numeric"
-          />
-        </View>
-
-        {/* Date */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (selectedDate) setDate(selectedDate);
-            }}
-          />
-        )}
-
-        <TouchableOpacity style={styles.button} onPress={handleTransaction}>
-          <Text style={styles.buttonText}>
-            {transactionId ? "MODIFY TRANSACTION" : "ADD TRANSACTION"}
-          </Text>
-        </TouchableOpacity>
-      </KeyboardAwareScrollView>
+          <TouchableOpacity style={styles.button} onPress={handleTransaction}>
+            <Text style={styles.buttonText}>
+              {transactionId ? "MODIFY TRANSACTION" : "ADD TRANSACTION"}
+            </Text>
+          </TouchableOpacity>
+        </KeyboardAwareScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -221,6 +231,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingTop: 10,
+  },
+  keyboardAvoider: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "space-between",
   },
   header: {
     backgroundColor: Colors.primary,
@@ -258,12 +275,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   button: {
-    marginTop: "auto",
     backgroundColor: Colors.primary,
     padding: 14,
     borderRadius: 6,
     alignItems: "center",
-    marginBottom: 20,
+    marginTop: 24,
+    marginBottom: 10,
   },
   buttonText: {
     color: "#fff",

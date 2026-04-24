@@ -1,11 +1,12 @@
 import { useNavigation } from "expo-router";
-import { useState, useCallback } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { useState, useCallback, useMemo } from "react";
+import { Image, LayoutAnimation, StyleSheet, Text, View } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import logo from "../../assets/images/iq.png";
 import ExpenseIncome from "../../components/Charts/ExpenseIncome";
 import CostEarnList from "../../components/CostEarnList";
+import FadeInView from "../../components/UI/FadeInView";
 import Button from "../../components/UI/Button";
 import {
   useGetAllCategoriesWithSumQuery,
@@ -15,6 +16,15 @@ import * as SecureStore from "expo-secure-store";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
+
+const areArraysEqual = (arrA = [], arrB = []) => {
+  if (arrA.length !== arrB.length) return false;
+  for (let i = 0; i < arrA.length; i += 1) {
+    if (arrA[i] !== arrB[i]) return false;
+  }
+  return true;
+};
+
 const DashboardScreen = () => {
 
   const { tab } = useLocalSearchParams();
@@ -27,12 +37,17 @@ const DashboardScreen = () => {
     eur: "€",
   };
 
+  const switchTransactionTab = useCallback((nextType) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpense(nextType);
+    setType(nextType);
+  }, []);
+
   useEffect(() => {
     if (tab) {
-      setExpense(tab);
-      setType(tab);
+      switchTransactionTab(tab);
     }
-  }, [tab]);
+  }, [tab, switchTransactionTab]);
 
   // --- STATE ---
   const [type, setType] = useState("expenses");
@@ -47,16 +62,14 @@ const DashboardScreen = () => {
   ]);
   const [savedCategories, setSavedCategories] = useState([]);
 
-  const navigation = useNavigation();
-
   // --- API QUERIES ---
-  const { data: allCategoriesWithSum, refetch: refetchCategories } =
+  const { data: allCategoriesWithSum } =
     useGetAllCategoriesWithSumQuery(
       { type, time: value, savedCategory: savedCategories },
       { refetchOnMountOrArgChange: true }
     );
 
-  const { data: specificTransactionRecent } =
+  const { data: specificTransactionRecent, isFetching: isFetchingRecent } =
     useGetSpecificTransactionRecentQuery(
       { type, limit },
       { refetchOnMountOrArgChange: true }
@@ -75,11 +88,9 @@ const DashboardScreen = () => {
               : "selectedIncomeCategories"
           );
           const categories = JSON.parse(storedCategories || "[]");
-          setSavedCategories(categories);
-
-          if (refetchCategories) {
-            refetchCategories();
-          }
+          setSavedCategories((prev) =>
+            areArraysEqual(prev, categories) ? prev : categories
+          );
         } catch (error) { }
       };
 
@@ -88,54 +99,63 @@ const DashboardScreen = () => {
   );
 
   // --- TRANSFORM DATA ---
-  const transformedSpecificTransactionRecent =
-    specificTransactionRecent?.result?.map((tx) => {
-      const symbol = currencySymbols[tx.currency] || "$"; // fallback to $
-      return {
-        transactionId: tx._id,
-        name: tx.category?.name || "Unknown",
-        icon: tx.category?.categoryImage || null,
-        amount: `${symbol}${Math.abs(tx.amount)}`,
-        userId: tx.userId,
-        createdAt: tx.createdAt,
-        updatedAt: tx.updatedAt,
-        categoryType: tx.category?.type || "unknown",
-      };
-    }) || [];
-
-  const expenseData =
-    allCategoriesWithSum?.result
-      .filter((cat) => cat.type === "expenses")
-      .map((cat) => {
-        const symbol = currencySymbols[currency] || "$";
+  const transformedSpecificTransactionRecent = useMemo(
+    () =>
+      specificTransactionRecent?.result?.map((tx) => {
+        const symbol = currencySymbols[tx.currency] || "$"; // fallback to $
         return {
-          transactionId: cat._id,
-          name: cat.name,
-          icon: cat.categoryImage,
-          amount: `${symbol}${Math.abs(cat.totalAmount)}`,
-          userId: cat.userId,
-          createdAt: cat.createdAt,
-          updatedAt: cat.updatedAt,
-          categoryType: cat.type,
+          transactionId: tx._id,
+          name: tx.category?.name || "Unknown",
+          icon: tx.category?.categoryImage || null,
+          amount: `${symbol}${Math.abs(tx.amount)}`,
+          userId: tx.userId,
+          createdAt: tx.createdAt,
+          updatedAt: tx.updatedAt,
+          categoryType: tx.category?.type || "unknown",
         };
-      }) || [];
+      }) || [],
+    [specificTransactionRecent]
+  );
 
-  const incomeData =
-    allCategoriesWithSum?.result
-      .filter((cat) => cat.type === "income")
-      .map((cat) => {
-        const symbol = currencySymbols[currency] || "$";
-        return {
-          transactionId: cat._id,
-          name: cat.name,
-          icon: cat.categoryImage,
-          amount: `${symbol}${Math.abs(cat.totalAmount)}`,
-          userId: cat.userId,
-          createdAt: cat.createdAt,
-          updatedAt: cat.updatedAt,
-          categoryType: cat.type,
-        };
-      }) || [];
+  const expenseData = useMemo(
+    () =>
+      allCategoriesWithSum?.result
+        .filter((cat) => cat.type === "expenses")
+        .map((cat) => {
+          const symbol = currencySymbols[currency] || "$";
+          return {
+            transactionId: cat._id,
+            name: cat.name,
+            icon: cat.categoryImage,
+            amount: `${symbol}${Math.abs(cat.totalAmount)}`,
+            userId: cat.userId,
+            createdAt: cat.createdAt,
+            updatedAt: cat.updatedAt,
+            categoryType: cat.type,
+          };
+        }) || [],
+    [allCategoriesWithSum, currency]
+  );
+
+  const incomeData = useMemo(
+    () =>
+      allCategoriesWithSum?.result
+        .filter((cat) => cat.type === "income")
+        .map((cat) => {
+          const symbol = currencySymbols[currency] || "$";
+          return {
+            transactionId: cat._id,
+            name: cat.name,
+            icon: cat.categoryImage,
+            amount: `${symbol}${Math.abs(cat.totalAmount)}`,
+            userId: cat.userId,
+            createdAt: cat.createdAt,
+            updatedAt: cat.updatedAt,
+            categoryType: cat.type,
+          };
+        }) || [],
+    [allCategoriesWithSum, currency]
+  );
 
   // --- RENDER ---
   return (
@@ -161,19 +181,13 @@ const DashboardScreen = () => {
       {/* Toggle Buttons */}
       <View style={styles.buttonContainer}>
         <Button
-          onPress={() => {
-            setExpense("expenses");
-            setType("expenses");
-          }}
+          onPress={() => switchTransactionTab("expenses")}
           isActive={expense === "expenses"}
         >
           Expenses
         </Button>
         <Button
-          onPress={() => {
-            setExpense("income");
-            setType("income");
-          }}
+          onPress={() => switchTransactionTab("income")}
           isActive={expense === "income"}
         >
           Income
@@ -183,18 +197,32 @@ const DashboardScreen = () => {
       {/* Charts & Specific Transaction List */}
       {expense === "expenses" ? (
         <>
-          <ExpenseIncome expenseData={expenseData} />
+          <FadeInView trigger={`${expense}-${value}-${expenseData.length}`}>
+            <ExpenseIncome expenseData={expenseData} />
+          </FadeInView>
           <View style={{ flex: 1 }}>
             <Text style={styles.listText}>Specific Cost</Text>
-            <CostEarnList data={transformedSpecificTransactionRecent} />
+            <FadeInView
+              style={{ flex: 1 }}
+              trigger={`${expense}-${value}-${transformedSpecificTransactionRecent.length}`}
+            >
+              <CostEarnList data={transformedSpecificTransactionRecent} />
+            </FadeInView>
           </View>
         </>
       ) : (
         <>
-          <ExpenseIncome expenseData={incomeData} />
+          <FadeInView trigger={`${expense}-${value}-${incomeData.length}`}>
+            <ExpenseIncome expenseData={incomeData} />
+          </FadeInView>
           <View style={{ flex: 1 }}>
             <Text style={styles.listText}>Specific Earn</Text>
-            <CostEarnList data={transformedSpecificTransactionRecent} />
+            <FadeInView
+              style={{ flex: 1 }}
+              trigger={`${expense}-${value}-${transformedSpecificTransactionRecent.length}`}
+            >
+              <CostEarnList data={transformedSpecificTransactionRecent} />
+            </FadeInView>
           </View>
         </>
       )}

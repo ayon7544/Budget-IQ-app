@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { memo, useCallback } from "react";
 import {
   FlatList,
   Image,
@@ -8,49 +9,37 @@ import {
   View,
 } from "react-native";
 import RemoteSvg from "./RemoteSvg";
-import { useEffect } from "react";
-const CostEarnList = ({ data }) => {
-  const router = useRouter();
-  useEffect(() => { }, [data]);
-  const SpecificCostItem = ({
-    icon,
-    name,
-    createdAt,
-    amount,
-    transactionId,
-    categoryType,
-  }) => (
-    <TouchableOpacity
-      onPress={() => {
-        router.push({
-          pathname: "/IncrementDecrementAmount",
-          params: {
-            image: icon,
-            name,
-            createdAt,
-            ammount: amount,
-            transactionId,
-            categoryType,
-            fromTab: categoryType  // 👈 add this
-          },
-        });
-      }}
-    >
+
+const SpecificCostItem = memo(function SpecificCostItem({
+  icon,
+  name,
+  createdAt,
+  amount,
+  transactionId,
+  categoryType,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity onPress={() => onPress({ icon, name, createdAt, amount, transactionId, categoryType })}>
       <View style={styles.itemContainer}>
         <View style={styles.iconAndText}>
           {icon ? (
-          <RemoteSvg uri={icon} width={40} height={40} />
-        ) : (
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              backgroundColor: "#eee",
-              borderRadius: 8,
-              marginRight: 15,
-            }}
-          />
-        )}
+            icon?.endsWith(".svg") ? (
+              <RemoteSvg uri={icon} width={40} height={40} />
+            ) : (
+              <Image source={{ uri: icon }} style={styles.iconImage} />
+            )
+          ) : (
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                backgroundColor: "#eee",
+                borderRadius: 8,
+                marginRight: 15,
+              }}
+            />
+          )}
           <View>
             <Text style={styles.itemName}>  {name}</Text>
             <Text style={styles.itemDate}>  {createdAt?.split("T")[0]}</Text>
@@ -60,22 +49,55 @@ const CostEarnList = ({ data }) => {
       </View>
     </TouchableOpacity>
   );
+});
+
+const CostEarnList = ({ data }) => {
+  const router = useRouter();
+
+  const handleItemPress = useCallback(
+    ({ icon, name, createdAt, amount, transactionId, categoryType }) => {
+      router.push({
+        pathname: "/IncrementDecrementAmount",
+        params: {
+          image: icon,
+          name,
+          createdAt,
+          ammount: amount,
+          transactionId,
+          categoryType,
+          fromTab: categoryType,
+        },
+      });
+    },
+    [router]
+  );
+
+  const renderItem = useCallback(
+    ({ item }) => (
+      <SpecificCostItem
+        icon={item.icon}
+        name={item.name}
+        createdAt={item.createdAt}
+        amount={item.amount}
+        transactionId={item.transactionId}
+        categoryType={item.categoryType}
+        onPress={handleItemPress}
+      />
+    ),
+    [handleItemPress]
+  );
+
+  const keyExtractor = useCallback((item) => item.transactionId.toString(), []);
 
   return (
     <View style={styles.container}>
       <FlatList
         data={data}
-        keyExtractor={(item) => item.transactionId.toString()}
-        renderItem={({ item }) => (
-          <SpecificCostItem
-            icon={item.icon}
-            name={item.name}
-            createdAt={item.createdAt} // pass the original date
-            amount={item.amount}
-            transactionId={item.transactionId}
-            categoryType={item.categoryType}
-          />
-        )}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        removeClippedSubviews
+        initialNumToRender={8}
+        windowSize={7}
       />
     </View>
   );

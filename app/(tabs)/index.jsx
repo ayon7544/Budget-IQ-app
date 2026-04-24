@@ -1,9 +1,10 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useUserGetMeQuery } from "../../redux/services/api";
+import { useCallback, useEffect, useState } from "react";
+import { api, useUserGetMeQuery } from "../../redux/services/api";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   ScrollView,
@@ -14,32 +15,32 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import logo from "../../assets/images/iq.png";
 import TotalSpentDonutChart from "../../components/Charts/TotalSpentDonutChart";
 import {
-  api,
   useGetMessageWithTotalTransactionQuery,
   useIqBuddyMutation,
 } from "../../redux/services/api";
 import { Avatar } from "react-native-paper";
 
-import { selectApiSuccess } from "../../redux/slices/messageSlice";
+import {
+  saveApiSuccess,
+  selectApiSuccess,
+} from "../../redux/slices/messageSlice";
 import {
   TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const Index = () => {
   const router = useRouter();
-  const scrollViewRef = useRef();
+  const dispatch = useDispatch();
   const apiSuccess = useSelector(selectApiSuccess);
   const [modalVisible, setModalVisible] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [storedImage, setStoredImage] = useState(null);
   const [motivationalMessage, setMotivationalMessage] = useState(null);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -53,9 +54,10 @@ const Index = () => {
   }, [data]);
   const { data: messageData, refetch } =
     useGetMessageWithTotalTransactionQuery();
+
   useEffect(() => {
-    // Wait for apiSuccess to be explicitly true or false
-    if (apiSuccess === true && messageData.success === true) {
+    if (messageData?.success === true) {
+      dispatch(saveApiSuccess(true));
       setMotivationalMessage(messageData?.message || "");
       setTotalIncome(
         messageData?.data?.totalIncomeAndExpenses?.totalIncome || 0
@@ -63,13 +65,11 @@ const Index = () => {
       setTotalExpenses(
         messageData?.data?.totalIncomeAndExpenses?.totalExpenses || 0
       );
-    } else if (apiSuccess === false || apiSuccess === null) {
-      // Only route when apiSuccess is confirmed false
-      router.replace("Subscriptions");
-    } else {
+    } else if (messageData?.success === false) {
+      dispatch(saveApiSuccess(false));
       router.replace("LoginScreen");
     }
-  }, [apiSuccess, messageData]);
+  }, [dispatch, messageData, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -151,11 +151,9 @@ const Index = () => {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <KeyboardAwareScrollView
+        <KeyboardAvoidingView
           style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          enableOnAndroid
+          behavior="padding"
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.modalOverlay}>
@@ -167,13 +165,7 @@ const Index = () => {
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView
-                  style={styles.chatContainer}
-                  ref={scrollViewRef}
-                  onContentSizeChange={() =>
-                    scrollViewRef.current?.scrollToEnd({ animated: true })
-                  }
-                >
+                <View style={styles.chatContainer}>
                   {messages.map((msg, idx) => (
                     <View
                       key={idx}
@@ -192,7 +184,7 @@ const Index = () => {
                       <Text style={styles.messageText}>Bot is typing...</Text>
                     </View>
                   )}
-                </ScrollView>
+                </View>
 
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -223,7 +215,7 @@ const Index = () => {
               </View>
             </View>
           </TouchableWithoutFeedback>
-        </KeyboardAwareScrollView>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

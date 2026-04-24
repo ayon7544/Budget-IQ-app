@@ -2,20 +2,41 @@ import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { SvgXml } from "react-native-svg";
 
+const svgCache = new Map();
+
 const RemoteSvg = ({ uri, width = 40, height = 40 }) => {
-  const [svgXmlData, setSvgXmlData] = useState(null);
+  const [svgXmlData, setSvgXmlData] = useState(uri ? svgCache.get(uri) || null : null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
+    if (!uri) {
+      setSvgXmlData(null);
+      setError(true);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const cached = svgCache.get(uri);
+    if (cached) {
+      setSvgXmlData(cached);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     fetch(uri)
       .then((response) => response.text())
       .then((text) => {
-        if (isMounted) setSvgXmlData(text);
+        if (isMounted) {
+          svgCache.set(uri, text);
+          setSvgXmlData(text);
+        }
       })
       .catch(() => {
-        if (isMounted) setError(true);  // <-- only update if mounted
+        if (isMounted) setError(true);
       });
 
     return () => {

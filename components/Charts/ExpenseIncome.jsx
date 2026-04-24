@@ -1,44 +1,45 @@
+import { memo, useCallback } from "react";
 import { Image, TouchableOpacity, Text, View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import RemoteSvg from "../RemoteSvg";
+
+const CategoryItem = memo(({ item, onPress }) => (
+  <View style={styles.categoryItem}>
+    <TouchableOpacity onPress={() => onPress(item)}>
+      <View style={styles.iconContainer}>
+        {item.icon?.endsWith(".svg") ? (
+          <RemoteSvg uri={item.icon} width={60} height={60} />
+        ) : (
+          <Image source={{ uri: item.icon }} style={styles.iconImage} resizeMode="cover" />
+        )}
+      </View>
+      <Text style={styles.amountText}>{item?.amount}</Text>
+    </TouchableOpacity>
+  </View>
+));
+
 const ExpenseIncome = ({ expenseData }) => {
   const router = useRouter();
 
-  const CategoryItem = ({ item }) => (
-    <View style={styles.categoryItem}>
-      <TouchableOpacity
-        onPress={() =>
-          router.push({
-            pathname: "/IncrementDecrementAmount",
-            params: {
-              id: item.transactionId,
-              name: item.name,
-              image: item.icon,
-              fromTab: item.categoryType,
-            },
-          })
-        }
-      >
-        <View style={styles.iconContainer}>
-          {item.icon?.endsWith(".svg") ? (
-            <RemoteSvg uri={item.icon} width={60} height={60} />
-          ) : (
-            <Image
-              source={{ uri: item.icon }}
-              style={styles.iconImage}
-              resizeMode="cover"
-            />
-          )}
-        </View>
-        <Text style={styles.amountText}>{item?.amount}</Text>
-      </TouchableOpacity>
-    </View>
+  const handlePress = useCallback(
+    (item) => {
+      router.push({
+        pathname: "/IncrementDecrementAmount",
+        params: {
+          id: item.transactionId,
+          name: item.name,
+          image: item.icon,
+          fromTab: item.categoryType,
+        },
+      });
+    },
+    [router]
   );
 
   return (
     <View style={styles.listContainer}>
       {expenseData.map((item) => (
-        <CategoryItem key={item.transactionId} item={item} />
+        <CategoryItem key={item.transactionId} item={item} onPress={handlePress} />
       ))}
     </View>
   );
