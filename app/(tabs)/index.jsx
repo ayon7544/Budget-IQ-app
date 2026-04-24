@@ -52,10 +52,16 @@ const Index = () => {
       setUserImage(data?.data?.profileImageUrl);
     }
   }, [data]);
-  const { data: messageData, refetch } =
-    useGetMessageWithTotalTransactionQuery();
+  const {
+    data: messageData,
+    isLoading: isMessageLoading,
+    isFetching: isMessageFetching,
+    refetch,
+  } = useGetMessageWithTotalTransactionQuery();
 
   useEffect(() => {
+    if (isMessageLoading || isMessageFetching) return;
+
     if (messageData?.success === true) {
       dispatch(saveApiSuccess(true));
       setMotivationalMessage(messageData?.message || "");
@@ -65,11 +71,17 @@ const Index = () => {
       setTotalExpenses(
         messageData?.data?.totalIncomeAndExpenses?.totalExpenses || 0
       );
-    } else if (messageData?.success === false) {
+    } else {
       dispatch(saveApiSuccess(false));
-      router.replace("LoginScreen");
+      router.replace("Subscriptions");
     }
-  }, [dispatch, messageData, router]);
+  }, [
+    dispatch,
+    isMessageLoading,
+    isMessageFetching,
+    messageData,
+    router,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
