@@ -5,9 +5,11 @@ import { Colors } from "../../Constants/Colors";
 const TabLayout = () => {
   return (
     <Tabs
+      detachInactiveScreens={false}
       screenOptions={{
         headerShown: false,
-        animation: "fade",
+        animation: "none",
+        lazy: false,
         tabBarActiveTintColor: Colors.primary,
         // tabBarActiveTintColor: "#ffff",
         tabBarInactiveTintColor: "#020617",

@@ -75,6 +75,8 @@ const DashboardScreen = () => {
       { refetchOnMountOrArgChange: true }
     );
 
+  const categoriesResult = allCategoriesWithSum?.result ?? [];
+
   const currency = specificTransactionRecent?.result?.[0]?.currency;
 
   // --- FETCH SAVED CATEGORIES + REFETCH ---
@@ -119,7 +121,7 @@ const DashboardScreen = () => {
 
   const expenseData = useMemo(
     () =>
-      allCategoriesWithSum?.result
+      categoriesResult
         .filter((cat) => cat.type === "expenses")
         .map((cat) => {
           const symbol = currencySymbols[currency] || "$";
@@ -134,12 +136,12 @@ const DashboardScreen = () => {
             categoryType: cat.type,
           };
         }) || [],
-    [allCategoriesWithSum, currency]
+    [categoriesResult, currency]
   );
 
   const incomeData = useMemo(
     () =>
-      allCategoriesWithSum?.result
+      categoriesResult
         .filter((cat) => cat.type === "income")
         .map((cat) => {
           const symbol = currencySymbols[currency] || "$";
@@ -154,7 +156,7 @@ const DashboardScreen = () => {
             categoryType: cat.type,
           };
         }) || [],
-    [allCategoriesWithSum, currency]
+    [categoriesResult, currency]
   );
 
   // --- RENDER ---

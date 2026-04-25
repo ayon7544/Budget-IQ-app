@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { use, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TextInput,
@@ -21,6 +22,7 @@ const AccountVerification = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [countdown, setCountdown] = useState(60);
   const [isResendDisabled, setIsResendDisabled] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRefs = useRef([]);
   const router = useRouter();
   const { email } = useLocalSearchParams();
@@ -102,6 +104,8 @@ const AccountVerification = () => {
 
   // Handle OTP verification and sign in
   const handleVerify = async () => {
+    if (isSubmitting) return;
+
     if (otp.join("").length < 6) {
       Toast.show({
         type: "error",
@@ -125,6 +129,8 @@ const AccountVerification = () => {
       });
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const verifyResponse = await oTP({
@@ -176,6 +182,8 @@ const AccountVerification = () => {
         visibilityTime: 3000,
         autoHide: true,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -212,8 +220,16 @@ const AccountVerification = () => {
             ))}
           </View>
 
-          <TouchableOpacity style={styles.verifyButton} onPress={handleVerify}>
-            <Text style={styles.verifyText}>Send</Text>
+          <TouchableOpacity
+            style={[styles.verifyButton, isSubmitting && styles.verifyButtonDisabled]}
+            onPress={handleVerify}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.verifyText}>Send</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.resendCode}>
@@ -288,6 +304,12 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 5,
     width: "100%",
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  verifyButtonDisabled: {
+    opacity: 0.7,
   },
   verifyText: {
     color: "white",

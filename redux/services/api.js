@@ -1,9 +1,8 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { Platform } from "react-native";
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
-  "http://10.10.20.100:5002/api/v1";
+  "https://budgetiq.net/api/v1";
 
 export const api = createApi({
   reducerPath: "api",
@@ -132,8 +131,9 @@ export const api = createApi({
         method: "GET",
       }),
       transformResponse: (response) => {
-        // Map through the result and prepend the server URL to categoryImage
-        const resultWithFullImage = response.result.map((tx) => ({
+        const safeResult = Array.isArray(response?.result) ? response.result : [];
+        // Map through the result and normalize categoryImage while preserving non-array responses
+        const resultWithFullImage = safeResult.map((tx) => ({
           ...tx,
           category: {
             ...tx.category,
@@ -152,7 +152,8 @@ export const api = createApi({
         method: "GET",
       }),
       transformResponse: (response) => {
-        const resultWithFullImage = response.result.map((cat) => ({
+        const safeResult = Array.isArray(response?.result) ? response.result : [];
+        const resultWithFullImage = safeResult.map((cat) => ({
           ...cat,
           categoryImage: `${cat.categoryImage}`, // prepend server
         }));
@@ -181,7 +182,8 @@ export const api = createApi({
         };
       },
       transformResponse: (response) => {
-        const resultWithFullImage = response.result.map((cat) => ({
+        const safeResult = Array.isArray(response?.result) ? response.result : [];
+        const resultWithFullImage = safeResult.map((cat) => ({
           ...cat,
           categoryImage: `${cat.categoryImage}`,
         }));
