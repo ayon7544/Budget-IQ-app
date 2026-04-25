@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import RemoteSvg from "../components/RemoteSvg";
+import RemoteSvg from "../Components/RemoteSvg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../Constants/Colors";
 import {

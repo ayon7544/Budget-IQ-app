@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import Toast from "react-native-toast-message";
-import RemoteSvg from "../components/RemoteSvg";
+import RemoteSvg from "../Components/RemoteSvg";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useGetAllCategoriesQuery } from "../redux/services/api";
 import * as SecureStore from "expo-secure-store";
@@ -72,7 +72,7 @@ const ExpensesCategories = () => {
             );
             setSelectedCategories(validIds);
           }
-        } catch {}
+        } catch { }
         setApiLoaded(true);
       }
     };
@@ -106,7 +106,7 @@ const ExpensesCategories = () => {
         JSON.stringify(selectedCategories),
       );
       router.push("/DashboardScreen");
-    } catch {}
+    } catch { }
   };
 
   const renderItem = ({ item }) => (

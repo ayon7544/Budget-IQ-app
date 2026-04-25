@@ -4,10 +4,10 @@ import { Image, LayoutAnimation, StyleSheet, Text, View } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import logo from "../../assets/images/iq.png";
-import ExpenseIncome from "../../components/Charts/ExpenseIncome";
-import CostEarnList from "../../components/CostEarnList";
-import FadeInView from "../../components/UI/FadeInView";
-import Button from "../../components/UI/Button";
+import ExpenseIncome from "../../Components/Charts/ExpenseIncome";
+import CostEarnList from "../../Components/CostEarnList";
+import FadeInView from "../../Components/UI/FadeInView";
+import Button from "../../Components/UI/Button";
 import {
   useGetAllCategoriesWithSumQuery,
   useGetSpecificTransactionRecentQuery,

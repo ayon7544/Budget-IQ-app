@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import logo from "../../assets/images/iq.png";
-import TotalSpentDonutChart from "../../components/Charts/TotalSpentDonutChart";
+import TotalSpentDonutChart from "../../Components/Charts/TotalSpentDonutChart";
 import {
   useGetMessageWithTotalTransactionQuery,
   useIqBuddyMutation,

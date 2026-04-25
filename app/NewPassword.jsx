@@ -12,7 +12,7 @@ import {
 import Toast from "react-native-toast-message";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import BackButton from "../components/UI/BackButton";
+import BackButton from "../Components/UI/BackButton";
 import { Colors } from "../Constants/Colors";
 import { useResetPasswordMutation } from "../redux/services/api";
 
