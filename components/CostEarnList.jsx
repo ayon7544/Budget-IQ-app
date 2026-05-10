@@ -39,18 +39,26 @@ const CostEarnList = ({ data }) => {
       <View style={styles.itemContainer}>
         <View style={styles.iconAndText}>
           {icon ? (
-          <RemoteSvg uri={icon} width={40} height={40} />
-        ) : (
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              backgroundColor: "#eee",
-              borderRadius: 8,
-              marginRight: 15,
-            }}
-          />
-        )}
+            icon?.endsWith(".svg") ? (
+              <RemoteSvg uri={icon} width={40} height={40} />
+            ) : (
+              <Image
+                source={{ uri: icon }}
+                style={styles.iconImage}
+                resizeMode="cover"
+              />
+            )
+          ) : (
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                backgroundColor: "#eee",
+                borderRadius: 8,
+                marginRight: 15,
+              }}
+            />
+          )}
           <View>
             <Text style={styles.itemName}>  {name}</Text>
             <Text style={styles.itemDate}>  {createdAt?.split("T")[0]}</Text>

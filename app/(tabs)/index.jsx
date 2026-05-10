@@ -3,10 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useUserGetMeQuery } from "../../redux/services/api";
 import {
   ActivityIndicator,
+  FlatList,
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,11 +28,6 @@ import {
 import { Avatar } from "react-native-paper";
 
 import { selectApiSuccess } from "../../redux/slices/messageSlice";
-import {
-  TouchableWithoutFeedback,
-  Keyboard,
-} from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const Index = () => {
   const router = useRouter();
@@ -62,9 +60,9 @@ const Index = () => {
       );
       setTotalExpenses(
         messageData?.data?.totalIncomeAndExpenses?.totalExpenses || 0
-      );
+      ); 
     } else if (apiSuccess === false || apiSuccess === null) {
-      // Only route when apiSuccess is confirmed false
+      console.log(apiSuccess, messageData);
       router.replace("Subscriptions");
     } else {
       router.replace("LoginScreen");
@@ -141,7 +139,7 @@ const Index = () => {
         style={styles.askButton}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={styles.askButtonText}>ASK IQ BUDDY</Text>
+        <Text style={styles.askButtonText}>ASK AI BUDDY</Text>
       </TouchableOpacity>
 
       <Modal
@@ -151,79 +149,78 @@ const Index = () => {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <KeyboardAwareScrollView
+        <KeyboardAvoidingView
           style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          enableOnAndroid
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.modalOverlay}>
-              <View style={styles.popupContainer}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>IQ Buddy</Text>
-                  <TouchableOpacity onPress={() => setModalVisible(false)}>
-                    <Text style={styles.closeText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
+          <View style={styles.modalOverlay}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={Keyboard.dismiss} />
+            <View style={styles.popupContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>AI Buddy</Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <Text style={styles.closeText}>✕</Text>
+                </TouchableOpacity>
+              </View>
 
-                <ScrollView
-                  style={styles.chatContainer}
-                  ref={scrollViewRef}
-                  onContentSizeChange={() =>
-                    scrollViewRef.current?.scrollToEnd({ animated: true })
-                  }
+              <FlatList
+                ref={scrollViewRef}
+                style={styles.chatContainer}
+                contentContainerStyle={styles.chatContent}
+                data={
+                  isTyping
+                    ? [...messages, { text: "Bot is typing...", sender: "bot" }]
+                    : messages
+                }
+                keyExtractor={(item, index) => `${item.sender}-${index}`}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+                onContentSizeChange={() =>
+                  scrollViewRef.current?.scrollToEnd({ animated: true })
+                }
+                renderItem={({ item: msg }) => (
+                  <View
+                    style={[
+                      styles.messageBubble,
+                      msg.sender === "user"
+                        ? styles.userMessage
+                        : styles.botMessage,
+                    ]}
+                  >
+                    <Text style={styles.messageText}>{msg.text}</Text>
+                  </View>
+                )}
+              />
+
+              <View style={styles.inputContainer}>
+                <TextInput
+                  placeholder="Message AI Buddy"
+                  style={styles.input}
+                  value={inputText}
+                  onChangeText={setInputText}
+                />
+                <TouchableOpacity
+                  onPress={handleSend}
+                  disabled={inputText.trim() === "" || isTyping}
+                  style={styles.sendButton}
                 >
-                  {messages.map((msg, idx) => (
-                    <View
-                      key={idx}
+                  {isTyping ? (
+                    <ActivityIndicator size="small" color="#28a745" />
+                  ) : (
+                    <Text
                       style={[
-                        styles.messageBubble,
-                        msg.sender === "user"
-                          ? styles.userMessage
-                          : styles.botMessage,
+                        styles.sendIcon,
+                        inputText.trim() === "" && { opacity: 0.3 },
                       ]}
                     >
-                      <Text style={styles.messageText}>{msg.text}</Text>
-                    </View>
-                  ))}
-                  {isTyping && (
-                    <View style={[styles.messageBubble, styles.botMessage]}>
-                      <Text style={styles.messageText}>Bot is typing...</Text>
-                    </View>
+                      ➤
+                    </Text>
                   )}
-                </ScrollView>
-
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    placeholder="Message IQ Buddy"
-                    style={styles.input}
-                    value={inputText}
-                    onChangeText={setInputText}
-                  />
-                  <TouchableOpacity
-                    onPress={handleSend}
-                    disabled={inputText.trim() === "" || isTyping}
-                    style={styles.sendButton}
-                  >
-                    {isTyping ? (
-                      <ActivityIndicator size="small" color="#28a745" />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.sendIcon,
-                          inputText.trim() === "" && { opacity: 0.3 },
-                        ]}
-                      >
-                        ➤
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAwareScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -284,6 +281,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     flexGrow: 0,
     height: 300,
+  },
+  chatContent: {
+    paddingHorizontal: 15,
+    paddingVertical: 20,
   },
   messageBubble: {
     padding: 10,

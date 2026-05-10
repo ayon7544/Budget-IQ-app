@@ -9,35 +9,50 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
+import Constants from "expo-constants";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
 import { useCreatePaymentMutation } from "../redux/services/api";
+import { router } from "expo-router";
 
-const REVENUECAT_GOOGLE_API_KEY = "goog_DJMtUKOXHmVGiKAtFpzBNdploRu";
+const REVENUECAT_GOOGLE_API_KEY =
+  Constants.expoConfig?.extra?.revenueCat?.androidApiKey ?? "";
 
 const PLAN_META = {
-  monthly_standard: {
+  standard_plan: {
+    displayName: "Standard",
     emoji: "⚡",
     accent: "#00C896",
     tag: "POPULAR",
     period: "per month",
-    membershipPlanId: "monthly_standard_plan_001",
+    membershipPlanId: "monthly_plan",
   },
-  premium_subscription: {
+  premium_plan: {
+    displayName: "Premium",
     emoji: "👑",
     accent: "#7C5CFC",
     tag: "BEST VALUE",
     period: "per year",
-    membershipPlanId: "premium_subscription_plan_001",
+    membershipPlanId: "yearly_plan",
   },
 };
 
 // Map entitlement → your API's membershipPlanId
 const ENTITLEMENT_TO_PLAN = {
-  "Standard Android": "monthly_standard_plan_001",
-  "Premium Android": "premium_subscription_plan_001",
+  monthly_plan: "monthly_plan",
+  yearly_plan: "yearly_plan",
+  "Standard Android": "monthly_plan",
+  "Premium Android": "yearly_plan",
+};
+
+const PRODUCT_TO_PLAN = {
+  cat_monthly: "monthly_plan",
+  cat_yearly: "yearly_plan",
+  subscription_monthly: "monthly_plan",
+  subscription_yearly: "yearly_plan",
 };
 
 const buildPaymentPayload = (customerInfo, productIdentifier) => {
+  console.log("🔍 Building payment payload with customerInfo:", customerInfo);
   const active = customerInfo.entitlements.active;
   const entitlementKey = Object.keys(active)[0];
   const entitlement = active[entitlementKey];
@@ -55,7 +70,11 @@ const buildPaymentPayload = (customerInfo, productIdentifier) => {
     endDate:
       entitlement?.expirationDate ??
       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    membershipPlanId: ENTITLEMENT_TO_PLAN[entitlementKey] ?? "unknown_plan",
+    membershipPlanId:
+      ENTITLEMENT_TO_PLAN[entitlementKey] ??
+      PRODUCT_TO_PLAN[productId] ??
+      PRODUCT_TO_PLAN[productIdentifier] ??
+      "unknown_plan",
   };
 };
 
@@ -74,9 +93,8 @@ export default function Subscriptions() {
       return;
     }
 
-    // Avoid noisy billing errors while running Android development builds.
-    if (__DEV__) {
-      setBillingUnavailable(true);
+    if (!REVENUECAT_GOOGLE_API_KEY) {
+      console.warn("RevenueCat Android API key is missing in app config.");
       setLoading(false);
       return;
     }
@@ -84,7 +102,6 @@ export default function Subscriptions() {
     const init = async () => {
       Purchases.setLogLevel(LOG_LEVEL.WARN);
       Purchases.configure({ apiKey: REVENUECAT_GOOGLE_API_KEY });
-
       try {
         const canPay =
           typeof Purchases.canMakePayments === "function"
@@ -112,6 +129,9 @@ export default function Subscriptions() {
 
         setOfferingMap(map);
         setPackages(pkgList);
+        if (pkgList.length > 0) {
+          setSelectedOfferingId(pkgList[0].offeringId);
+        }
       } catch (e) {
         const message = e?.message || "Unable to load offerings";
         if (
@@ -162,16 +182,28 @@ export default function Subscriptions() {
         // Build and send payment payload to your API
         const payload = buildPaymentPayload(customerInfo, productIdentifier);
         console.log("📦 Payment payload:", JSON.stringify(payload, null, 2));
+        try {
+          const apiResponse = await createPayment(payload).unwrap();
+          console.log("✅ API response:", JSON.stringify(apiResponse, null, 2));
 
-        const apiResponse = await createPayment(payload).unwrap();
-        console.log("✅ API response:", JSON.stringify(apiResponse, null, 2));
+          Alert.alert("Success", "You're now subscribed!");
+          router.replace("/home");
+        } catch (apiError) {
+          const apiMessage =
+            apiError?.data?.message ||
+            apiError?.error ||
+            apiError?.message ||
+            "Failed to sync subscription with your server.";
 
-        Alert.alert("Success", "You're now subscribed!");
+          console.log("❌ Payment sync error:", apiError);
+          Alert.alert("Purchase completed", apiMessage);
+        }
       }
     } catch (e) {
-      if (!e.userCancelled) {
-        console.log("❌ Purchase error:", e.message);
-        Alert.alert("Purchase failed", e.message);
+      if (!e?.userCancelled) {
+        const message = e?.message || "Purchase failed";
+        console.log("❌ Purchase error:", message);
+        Alert.alert("Purchase failed", message);
       } else {
         console.log("🚫 User cancelled purchase");
       }
@@ -218,9 +250,11 @@ export default function Subscriptions() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>
-          {billingUnavailable
-            ? "Billing is unavailable on this emulator/device. Use a Play Store-enabled emulator or a real device."
-            : "No plans available right now."}
+          {!REVENUECAT_GOOGLE_API_KEY
+            ? "RevenueCat Android API key is missing. Add expo.extra.revenueCat.androidApiKey in app.json."
+            : billingUnavailable
+              ? "Billing is unavailable on this emulator/device. Use a Play Store-enabled emulator or a real device."
+              : "No plans available right now."}
         </Text>
       </View>
     );
@@ -238,7 +272,7 @@ export default function Subscriptions() {
         </View>
         <Text style={styles.headline}>Choose your{"\n"}plan</Text>
         <Text style={styles.subheadline}>
-          Unlock the full power of BudgetIQ
+          Unlock the full power of MY Money Sorted
         </Text>
       </View>
 
@@ -293,7 +327,7 @@ export default function Subscriptions() {
               </View>
 
               <Text style={styles.cardTitle}>
-                {pkg.product.title?.split("(")[0].trim()}
+                {meta.displayName || pkg.product.title?.split("(")[0].trim()}
               </Text>
               <View style={styles.priceRow}>
                 <Text style={[styles.price, { color: meta.accent }]}>

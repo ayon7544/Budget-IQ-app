@@ -24,8 +24,8 @@ const SecondScreen = () => {
       }
     };
     loadToken();
-   
-  
+
+
   }, [dispatch]);
 
   const handleNext = () => {
@@ -48,7 +48,7 @@ const SecondScreen = () => {
       </Text>
 
       <Text style={styles.description}>
-        Easily log in or sign up to connect with BUDGET IQ and calculate your
+        Easily log in or sign up to connect with MY Money Sorted and calculate your
         daily cost
       </Text>
 

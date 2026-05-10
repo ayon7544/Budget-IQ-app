@@ -103,7 +103,7 @@ const LoginScreen = () => {
               source={require("../assets/images/welcome.png")}
               style={styles.logo}
             />
-            <Text style={styles.logoText}>BUDGET{"\n"}IQ</Text>
+            <Text style={styles.logoText}>MY Money Sorted</Text>
 
             <Text style={styles.label}>Email</Text>
             <TextInput

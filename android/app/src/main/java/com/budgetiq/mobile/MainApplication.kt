@@ -1,4 +1,4 @@
-package com.budgetiq.mobile
+package com.budgetiq.android
 
 import android.app.Application
 import android.content.res.Configuration

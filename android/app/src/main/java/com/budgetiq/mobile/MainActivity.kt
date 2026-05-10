@@ -1,4 +1,4 @@
-package com.budgetiq.mobile
+package com.budgetiq.android
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

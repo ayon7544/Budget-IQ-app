@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Budget IQ",
+    "name": "MY Money Sorted",
     "slug": "budget-iq",
     "owner": "ayonghosh",
     "version": "1.0.0",
@@ -25,13 +25,15 @@
       }
     },
     "android": {
-      "package": "com.budgetiq.mobile",
+      "package": "com.budgetiq.android",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/welcome.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": [],
+      "permissions": [
+        "com.android.vending.BILLING"
+      ],
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "pan"
     },
@@ -51,9 +53,12 @@
       "typedRoutes": true
     },
     "extra": {
+      "revenueCat": {
+        "androidApiKey": "goog_GOWSNEmjgZmORVchBnzQmvDfZhf"
+      },
       "router": {},
       "eas": {
-        "projectId": "4c94e96b-3cfe-4c59-a756-c3fcd88d79e1"
+        "projectId": "40dcfc09-84fb-470e-834a-d88412200f63"
       }
     }
   }
