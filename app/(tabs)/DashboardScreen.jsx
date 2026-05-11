@@ -15,29 +15,22 @@ import * as SecureStore from "expo-secure-store";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
+
+const currencySymbols = {
+  usd: "$",
+  gbp: "£",
+  aud: "A$",
+  nzd: "NZ$",
+  eur: "€",
+};
+
 const DashboardScreen = () => {
-
   const { tab } = useLocalSearchParams();
-
-  const currencySymbols = {
-    usd: "$",
-    gbp: "£",
-    aud: "A$",
-    nzd: "NZ$",
-    eur: "€",
-  };
-
-  useEffect(() => {
-    if (tab) {
-      setExpense(tab);
-      setType(tab);
-    }
-  }, [tab]);
 
   // --- STATE ---
   const [type, setType] = useState("expenses");
   const [expense, setExpense] = useState("expenses");
-  const [limit, setLimit] = useState(1000);
+  const [limit] = useState(1000);
   const [value, setValue] = useState("month");
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([
@@ -47,7 +40,12 @@ const DashboardScreen = () => {
   ]);
   const [savedCategories, setSavedCategories] = useState([]);
 
-  const navigation = useNavigation();
+  useEffect(() => {
+    if (tab) {
+      setExpense(tab);
+      setType(tab);
+    }
+  }, [tab]);
 
   // --- API QUERIES ---
   const { data: allCategoriesWithSum, refetch: refetchCategories } =
@@ -56,7 +54,7 @@ const DashboardScreen = () => {
       { refetchOnMountOrArgChange: true }
     );
 
-  const { data: specificTransactionRecent } =
+  const { data: specificTransactionRecent, refetch: refetchRecent } = // ✅ added refetchRecent
     useGetSpecificTransactionRecentQuery(
       { type, limit },
       { refetchOnMountOrArgChange: true }
@@ -64,7 +62,7 @@ const DashboardScreen = () => {
 
   const currency = specificTransactionRecent?.result?.[0]?.currency;
 
-  // --- FETCH SAVED CATEGORIES + REFETCH ---
+  // --- FETCH SAVED CATEGORIES + REFETCH BOTH ON FOCUS ---
   useFocusEffect(
     useCallback(() => {
       const fetchSavedCategories = async () => {
@@ -76,11 +74,9 @@ const DashboardScreen = () => {
           );
           const categories = JSON.parse(storedCategories || "[]");
           setSavedCategories(categories);
-
-          if (refetchCategories) {
-            refetchCategories();
-          }
-        } catch (error) { }
+          refetchCategories();
+          refetchRecent(); // ✅ refetch recent transactions too
+        } catch (error) {}
       };
 
       fetchSavedCategories();
@@ -90,7 +86,7 @@ const DashboardScreen = () => {
   // --- TRANSFORM DATA ---
   const transformedSpecificTransactionRecent =
     specificTransactionRecent?.result?.map((tx) => {
-      const symbol = currencySymbols[tx.currency] || "$"; // fallback to $
+      const symbol = currencySymbols[tx.currency] || "$";
       return {
         transactionId: tx._id,
         name: tx.category?.name || "Unknown",

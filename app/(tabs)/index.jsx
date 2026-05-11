@@ -49,25 +49,35 @@ const Index = () => {
       setUserImage(data?.data?.profileImageUrl);
     }
   }, [data]);
-  const { data: messageData, refetch } =
-    useGetMessageWithTotalTransactionQuery();
-  useEffect(() => {
-    // Wait for apiSuccess to be explicitly true or false
-    if (apiSuccess === true && messageData.success === true) {
-      setMotivationalMessage(messageData?.message || "");
-      setTotalIncome(
-        messageData?.data?.totalIncomeAndExpenses?.totalIncome || 0
-      );
-      setTotalExpenses(
-        messageData?.data?.totalIncomeAndExpenses?.totalExpenses || 0
-      ); 
-    } else if (apiSuccess === false || apiSuccess === null) {
-      console.log(apiSuccess, messageData);
-      router.replace("Subscriptions");
-    } else {
-      router.replace("LoginScreen");
-    }
-  }, [apiSuccess, messageData]);
+// AFTER
+const {
+  data: messageData,
+  refetch,
+  isLoading: isMessageLoading,
+  isFetching: isMessageFetching,
+} = useGetMessageWithTotalTransactionQuery();
+
+useEffect(() => {
+  // ⏳ Don't evaluate routing while the request is still in-flight
+  if (isMessageLoading || isMessageFetching) return;
+
+  // ✅ API has settled — now it's safe to route
+  if (apiSuccess === true && messageData?.success === true) {
+    setMotivationalMessage(messageData?.message || "");
+    setTotalIncome(
+      messageData?.data?.totalIncomeAndExpenses?.totalIncome || 0
+    );
+    setTotalExpenses(
+      messageData?.data?.totalIncomeAndExpenses?.totalExpenses || 0
+    );
+  } else if (apiSuccess === null || apiSuccess === undefined) {
+     (apiSuccess);
+    router.replace("Subscriptions");
+  } else {
+     ("Message data not available.");
+    router.replace("LoginScreen");
+  }
+}, [apiSuccess, messageData, isMessageLoading, isMessageFetching]);
 
   useFocusEffect(
     useCallback(() => {

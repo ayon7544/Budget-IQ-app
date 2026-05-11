@@ -5,13 +5,16 @@ import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useDispatch } from "react-redux";
 import { loadTokenFromStorage } from "../redux/slices/authSlice";
+import { saveApiSuccess } from "../redux/slices/messageSlice";
 import { getToken } from "../utils/secureStore";
+import { useLazyGetMessageWithTotalTransactionQuery } from "../redux/services/api"; // ✅ same as LoginScreen
 
 SplashScreen.preventAutoHideAsync();
 
 export default function SplashScreenComponent() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const [triggerGetMessages] = useLazyGetMessageWithTotalTransactionQuery(); // ✅ same as LoginScreen
 
   useEffect(() => {
     const init = async () => {
@@ -19,26 +22,30 @@ export default function SplashScreenComponent() {
         const storedToken = await getToken();
 
         if (storedToken) {
-          // ✅ User is logged in — load token into Redux
           dispatch(loadTokenFromStorage(storedToken));
+
+          // ✅ exact same logic as LoginScreen's runAnotherAsyncFunction
+          try {
+            const result = await triggerGetMessages().unwrap();
+            dispatch(saveApiSuccess(result.success));
+          } catch (error) {
+            dispatch(saveApiSuccess(null));
+          }
+        } else {
+          dispatch(saveApiSuccess(null));
         }
 
-        // ✅ Hide splash first
         await SplashScreen.hideAsync();
-
-        // ✅ Navigate after a tick so layout is ready
         setTimeout(() => {
           if (storedToken) {
-            // logged in → go to main app
             router.replace("/(tabs)");
           } else {
-            // not logged in → go to onboarding
             router.replace("/InitialScreen");
           }
         }, 100);
 
       } catch (err) {
-        // Safety fallback — always navigate no matter what
+        dispatch(saveApiSuccess(null));
         await SplashScreen.hideAsync();
         setTimeout(() => {
           router.replace("/InitialScreen");
@@ -47,7 +54,7 @@ export default function SplashScreenComponent() {
     };
 
     init();
-  }, []);   // ✅ runs only once on mount — no dependency array issues
+  }, []);
 
   return (
     <View style={styles.container}>

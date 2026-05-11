@@ -137,7 +137,6 @@ const IncrementDecrementAmount = () => {
         router.push("/(tabs)/DashboardScreen");
       }
     } catch (error) {
-      console.error(error);
     }
   };
   if (userLoading) {
@@ -156,7 +155,6 @@ const IncrementDecrementAmount = () => {
           <Pressable onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </Pressable>
-          {console.log(image)}
           <View style={styles.headerButtonText}>
             <View style={{ marginRight: 8, backgroundColor: "#E0F2E9" }}>
               {image?.endsWith(".svg") ? (

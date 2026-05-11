@@ -58,12 +58,10 @@ const LoginScreen = () => {
       if (response?.data?.accessToken && formData?.email) {
         await saveAuthData(response?.data?.accessToken, formData?.email);
         dispatch(setToken(response?.data?.accessToken));
-        console.log(response);
         const token = await getToken();
       }
 
       await runAnotherAsyncFunction();
-
       router.replace("/(tabs)");
     } catch (error) {
       const message = error?.data?.message || "Something went wrong";

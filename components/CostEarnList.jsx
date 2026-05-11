@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import { useRouter } from "expo-router";
 import {
   FlatList,
@@ -8,38 +9,15 @@ import {
   View,
 } from "react-native";
 import RemoteSvg from "./RemoteSvg";
-import { useEffect } from "react";
-const CostEarnList = ({ data }) => {
-  const router = useRouter();
-  useEffect(() => { }, [data]);
-  const SpecificCostItem = ({
-    icon,
-    name,
-    createdAt,
-    amount,
-    transactionId,
-    categoryType,
-  }) => (
-    <TouchableOpacity
-      onPress={() => {
-        router.push({
-          pathname: "/IncrementDecrementAmount",
-          params: {
-            image: icon,
-            name,
-            createdAt,
-            ammount: amount,
-            transactionId,
-            categoryType,
-            fromTab: categoryType  // 👈 add this
-          },
-        });
-      }}
-    >
+
+// ✅ Lifted OUTSIDE the parent — stable identity, no remounts on parent re-render
+const SpecificCostItem = memo(
+  ({ icon, name, createdAt, amount, onPress }) => (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
       <View style={styles.itemContainer}>
         <View style={styles.iconAndText}>
           {icon ? (
-            icon?.endsWith(".svg") ? (
+            icon.endsWith(".svg") ? (
               <RemoteSvg uri={icon} width={40} height={40} />
             ) : (
               <Image
@@ -49,15 +27,7 @@ const CostEarnList = ({ data }) => {
               />
             )
           ) : (
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                backgroundColor: "#eee",
-                borderRadius: 8,
-                marginRight: 15,
-              }}
-            />
+            <View style={styles.iconPlaceholder} />
           )}
           <View>
             <Text style={styles.itemName}>  {name}</Text>
@@ -67,23 +37,62 @@ const CostEarnList = ({ data }) => {
         <Text style={styles.itemAmount}>{amount}</Text>
       </View>
     </TouchableOpacity>
+  )
+);
+
+const CostEarnList = ({ data }) => {
+  const router = useRouter();
+
+  // ✅ Stable navigation callback — won't trigger item re-renders
+  const handlePress = useCallback(
+    (item) => {
+      router.push({
+        pathname: "/IncrementDecrementAmount",
+        params: {
+          image: item.icon,
+          name: item.name,
+          createdAt: item.createdAt,
+          ammount: item.amount,
+          transactionId: item.transactionId,
+          categoryType: item.categoryType,
+          fromTab: item.categoryType,
+        },
+      });
+    },
+    [router]
+  );
+
+  // ✅ Memoized renderItem — only changes if handlePress changes
+  const renderItem = useCallback(
+    ({ item }) => (
+      <SpecificCostItem
+        icon={item.icon}
+        name={item.name}
+        createdAt={item.createdAt}
+        amount={item.amount}
+        transactionId={item.transactionId}
+        categoryType={item.categoryType}
+        onPress={() => handlePress(item)}
+      />
+    ),
+    [handlePress]
+  );
+
+  const keyExtractor = useCallback(
+    (item) => item.transactionId.toString(),
+    []
   );
 
   return (
     <View style={styles.container}>
       <FlatList
         data={data}
-        keyExtractor={(item) => item.transactionId.toString()}
-        renderItem={({ item }) => (
-          <SpecificCostItem
-            icon={item.icon}
-            name={item.name}
-            createdAt={item.createdAt} // pass the original date
-            amount={item.amount}
-            transactionId={item.transactionId}
-            categoryType={item.categoryType}
-          />
-        )}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        removeClippedSubviews={false} // ✅ prevents flash when items re-enter viewport
+        initialNumToRender={15}
+        maxToRenderPerBatch={10}
+        windowSize={5}
       />
     </View>
   );
@@ -108,7 +117,14 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 8,
     marginRight: 15,
-    backgroundColor: "#e8f5e9", // optional placeholder background
+    backgroundColor: "#e8f5e9",
+  },
+  iconPlaceholder: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#eee",
+    borderRadius: 8,
+    marginRight: 15,
   },
   itemName: { fontSize: 16, fontWeight: "500", color: "#333" },
   itemDate: { fontSize: 13, color: "#777", marginTop: 2 },

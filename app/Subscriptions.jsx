@@ -52,7 +52,7 @@ const PRODUCT_TO_PLAN = {
 };
 
 const buildPaymentPayload = (customerInfo, productIdentifier) => {
-  console.log("🔍 Building payment payload with customerInfo:", customerInfo);
+   ("🔍 Building payment payload with customerInfo:", customerInfo);
   const active = customerInfo.entitlements.active;
   const entitlementKey = Object.keys(active)[0];
   const entitlement = active[entitlementKey];
@@ -60,21 +60,31 @@ const buildPaymentPayload = (customerInfo, productIdentifier) => {
   const subInfo =
     customerInfo.subscriptionsByProductIdentifier?.[productId] ?? {};
 
+  const membershipPlanId =
+    ENTITLEMENT_TO_PLAN[entitlementKey] ??
+    PRODUCT_TO_PLAN[productId] ??
+    PRODUCT_TO_PLAN[productIdentifier] ??
+    "unknown_plan";
+
+  // ✅ Always calculate from now — never rely on Play Store dates
+  const startDate = new Date();
+  const endDate = new Date(startDate);
+
+  if (membershipPlanId === "yearly_plan") {
+    endDate.setFullYear(endDate.getFullYear() + 1); // ✅ exactly 1 year later
+  } else {
+    endDate.setMonth(endDate.getMonth() + 1); // ✅ exactly 1 month later
+  }
+
   return {
     sessionId: subInfo.storeTransactionId ?? `rc_session_${Date.now()}`,
     amount: productId === "cat_monthly" ? 900 : 3600,
     currency: "BDT",
     paymentProvider: "google_play",
     transitionId: subInfo.storeTransactionId ?? `rc_txn_${Date.now()}`,
-    startDate: entitlement?.originalPurchaseDate ?? new Date().toISOString(),
-    endDate:
-      entitlement?.expirationDate ??
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    membershipPlanId:
-      ENTITLEMENT_TO_PLAN[entitlementKey] ??
-      PRODUCT_TO_PLAN[productId] ??
-      PRODUCT_TO_PLAN[productIdentifier] ??
-      "unknown_plan",
+    startDate: startDate.toISOString(), // ✅ always now
+    endDate: endDate.toISOString(),     // ✅ +1 month or +1 year from now
+    membershipPlanId,
   };
 };
 
@@ -169,25 +179,18 @@ export default function Subscriptions() {
       const { customerInfo, productIdentifier } =
         await Purchases.purchasePackage(originalPackage);
 
-      console.log("✅ Purchase successful");
-      console.log("📦 Product purchased:", productIdentifier);
-      console.log(
-        "🔑 Active entitlements:",
-        JSON.stringify(customerInfo.entitlements.active, null, 2),
-      );
-
       const active = customerInfo.entitlements.active;
 
       if (Object.keys(active).length > 0) {
         // Build and send payment payload to your API
         const payload = buildPaymentPayload(customerInfo, productIdentifier);
-        console.log("📦 Payment payload:", JSON.stringify(payload, null, 2));
+         ("📦 Payment payload:", JSON.stringify(payload, null, 2));
         try {
           const apiResponse = await createPayment(payload).unwrap();
-          console.log("✅ API response:", JSON.stringify(apiResponse, null, 2));
+           ("✅ API response:", JSON.stringify(apiResponse, null, 2));
 
           Alert.alert("Success", "You're now subscribed!");
-          router.replace("/home");
+          router.replace("/");
         } catch (apiError) {
           const apiMessage =
             apiError?.data?.message ||
@@ -195,17 +198,17 @@ export default function Subscriptions() {
             apiError?.message ||
             "Failed to sync subscription with your server.";
 
-          console.log("❌ Payment sync error:", apiError);
+           ("❌ Payment sync error:", apiError);
           Alert.alert("Purchase completed", apiMessage);
         }
       }
     } catch (e) {
       if (!e?.userCancelled) {
         const message = e?.message || "Purchase failed";
-        console.log("❌ Purchase error:", message);
+         ("❌ Purchase error:", message);
         Alert.alert("Purchase failed", message);
       } else {
-        console.log("🚫 User cancelled purchase");
+         ("🚫 User cancelled purchase");
       }
     } finally {
       setPurchasing(false);
