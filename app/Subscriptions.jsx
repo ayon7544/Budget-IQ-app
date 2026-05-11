@@ -7,36 +7,46 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import Constants from "expo-constants";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
+import Toast from "react-native-toast-message";
 import { useCreatePaymentMutation } from "../redux/services/api";
 import { router } from "expo-router";
 
 const REVENUECAT_GOOGLE_API_KEY =
   Constants.expoConfig?.extra?.revenueCat?.androidApiKey ?? "";
 
+// ─── Theme ────────────────────────────────────────────────────────────────────
+const GREEN = {
+  900: "#064E3B",
+  800: "#065F46",
+  700: "#047857",
+  600: "#059669",
+  500: "#10B981",
+  400: "#34D399",
+  300: "#6EE7B7",
+  200: "#A7F3D0",
+  100: "#D1FAE5",
+  50:  "#ECFDF5",
+};
+
+// ─── Plan metadata ────────────────────────────────────────────────────────────
 const PLAN_META = {
   standard_plan: {
     displayName: "Standard",
-    emoji: "⚡",
-    accent: "#00C896",
     tag: "POPULAR",
-    period: "per month",
+    period: "/ month",
     membershipPlanId: "monthly_plan",
   },
   premium_plan: {
     displayName: "Premium",
-    emoji: "👑",
-    accent: "#7C5CFC",
     tag: "BEST VALUE",
-    period: "per year",
+    period: "/ year",
     membershipPlanId: "yearly_plan",
   },
 };
 
-// Map entitlement → your API's membershipPlanId
 const ENTITLEMENT_TO_PLAN = {
   monthly_plan: "monthly_plan",
   yearly_plan: "yearly_plan",
@@ -51,8 +61,68 @@ const PRODUCT_TO_PLAN = {
   subscription_yearly: "yearly_plan",
 };
 
+const FREE_BENEFITS = [
+  "Basic expense tracking",
+  "Up to 10 transactions/month",
+  "1 account",
+  "7-day access",
+];
+
+// ─── Extract benefits from a RevenueCat offering ─────────────────────────────
+//
+// Priority order:
+//  1. offering.metadata.benefits  → string[] set in RevenueCat dashboard
+//  2. pkg.product.description     → free-text from Google Play Console,
+//                                   split on newlines / bullet chars
+//  3. Empty array (render nothing)
+//
+const extractBenefits = (offering, pkg) => {
+  // 1. RevenueCat dashboard metadata: { "benefits": ["...", "..."] }
+  const metaBenefits = offering?.metadata?.benefits;
+  if (Array.isArray(metaBenefits) && metaBenefits.length > 0) {
+    return metaBenefits.map((b) => String(b).trim()).filter(Boolean);
+  }
+
+  // 2. Google Play Console product description
+  const desc = pkg?.product?.description;
+  if (desc && desc.trim().length > 0) {
+    return desc
+      .split(/\n|•|·|‣|▸|➤|★|-(?=\s)/) // common bullet/line separators
+      .map((line) => line.replace(/^[\s•·‣▸➤★\-]+/, "").trim())
+      .filter((line) => line.length > 2);
+  }
+
+  return [];
+};
+
+// ─── Toast helpers ────────────────────────────────────────────────────────────
+const showSuccess = (message) =>
+  Toast.show({ type: "success", text1: "Success", text2: message, position: "top" });
+
+const showError = (message) =>
+  Toast.show({ type: "error", text1: "Error", text2: message, position: "top" });
+
+const showInfo = (message) =>
+  Toast.show({ type: "info", text1: "Info", text2: message, position: "top" });
+
+// ─── Payload builders ─────────────────────────────────────────────────────────
+const buildFreePaymentPayload = () => {
+  const startDate = new Date();
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 7);
+  return {
+    sessionId: `free_session_${Date.now()}`,
+    amount: 0,
+    currency: "BDT",
+    paymentProvider: "free",
+    transitionId: `free_txn_${Date.now()}`,
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    membershipPlanId: "free_plan",
+  };
+};
+
 const buildPaymentPayload = (customerInfo, productIdentifier) => {
-   ("🔍 Building payment payload with customerInfo:", customerInfo);
   const active = customerInfo.entitlements.active;
   const entitlementKey = Object.keys(active)[0];
   const entitlement = active[entitlementKey];
@@ -66,14 +136,12 @@ const buildPaymentPayload = (customerInfo, productIdentifier) => {
     PRODUCT_TO_PLAN[productIdentifier] ??
     "unknown_plan";
 
-  // ✅ Always calculate from now — never rely on Play Store dates
   const startDate = new Date();
   const endDate = new Date(startDate);
-
   if (membershipPlanId === "yearly_plan") {
-    endDate.setFullYear(endDate.getFullYear() + 1); // ✅ exactly 1 year later
+    endDate.setFullYear(endDate.getFullYear() + 1);
   } else {
-    endDate.setMonth(endDate.getMonth() + 1); // ✅ exactly 1 month later
+    endDate.setMonth(endDate.getMonth() + 1);
   }
 
   return {
@@ -82,19 +150,20 @@ const buildPaymentPayload = (customerInfo, productIdentifier) => {
     currency: "BDT",
     paymentProvider: "google_play",
     transitionId: subInfo.storeTransactionId ?? `rc_txn_${Date.now()}`,
-    startDate: startDate.toISOString(), // ✅ always now
-    endDate: endDate.toISOString(),     // ✅ +1 month or +1 year from now
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
     membershipPlanId,
   };
 };
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function Subscriptions() {
   const [createPayment] = useCreatePaymentMutation();
-  const [packages, setPackages] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [offeringMap, setOfferingMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [selectedOfferingId, setSelectedOfferingId] = useState(null);
+  const [selectedOfferingId, setSelectedOfferingId] = useState("free_plan");
   const [purchasing, setPurchasing] = useState(false);
 
   useEffect(() => {
@@ -102,9 +171,8 @@ export default function Subscriptions() {
       setLoading(false);
       return;
     }
-
     if (!REVENUECAT_GOOGLE_API_KEY) {
-      console.warn("RevenueCat Android API key is missing in app config.");
+      console.warn("RevenueCat Android API key is missing.");
       setLoading(false);
       return;
     }
@@ -128,20 +196,22 @@ export default function Subscriptions() {
           throw new Error("Empty");
 
         const map = {};
-        const pkgList = [];
+        const planList = [];
 
         Object.values(result.all).forEach((offering) => {
           offering.availablePackages.forEach((pkg) => {
             map[offering.identifier] = pkg;
-            pkgList.push({ offeringId: offering.identifier, pkg });
+            planList.push({
+              offeringId: offering.identifier,
+              pkg,
+              offering,
+              benefits: extractBenefits(offering, pkg),
+            });
           });
         });
 
         setOfferingMap(map);
-        setPackages(pkgList);
-        if (pkgList.length > 0) {
-          setSelectedOfferingId(pkgList[0].offeringId);
-        }
+        setPlans(planList);
       } catch (e) {
         const message = e?.message || "Unable to load offerings";
         if (
@@ -161,12 +231,33 @@ export default function Subscriptions() {
     init();
   }, []);
 
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handlePurchase = async () => {
+    if (selectedOfferingId === "free_plan") {
+      try {
+        setPurchasing(true);
+        const payload = buildFreePaymentPayload();
+
+        const apiResponse = await createPayment(payload).unwrap();
+      
+        showSuccess("Your 7-day free access has started!");
+        router.replace("/");
+      } catch (apiError) {
+        const msg =
+          apiError?.data?.message ||
+          apiError?.error ||
+          apiError?.message ||
+          "Failed to activate free plan.";
+        console.error("❌ Free plan error:", apiError);
+        showError(msg);
+      } finally {
+        setPurchasing(false);
+      }
+      return;
+    }
+
     if (billingUnavailable) {
-      Alert.alert(
-        "Billing unavailable",
-        "Google Play Billing is not available on this device/emulator.",
-      );
+      showInfo("Google Play Billing is not available on this device/emulator.");
       return;
     }
 
@@ -175,40 +266,31 @@ export default function Subscriptions() {
 
     try {
       setPurchasing(true);
-
       const { customerInfo, productIdentifier } =
         await Purchases.purchasePackage(originalPackage);
 
       const active = customerInfo.entitlements.active;
-
       if (Object.keys(active).length > 0) {
-        // Build and send payment payload to your API
         const payload = buildPaymentPayload(customerInfo, productIdentifier);
-         ("📦 Payment payload:", JSON.stringify(payload, null, 2));
         try {
           const apiResponse = await createPayment(payload).unwrap();
-           ("✅ API response:", JSON.stringify(apiResponse, null, 2));
-
-          Alert.alert("Success", "You're now subscribed!");
+     
+          showSuccess("You're now subscribed!");
           router.replace("/");
         } catch (apiError) {
-          const apiMessage =
+          const msg =
             apiError?.data?.message ||
             apiError?.error ||
             apiError?.message ||
-            "Failed to sync subscription with your server.";
-
-           ("❌ Payment sync error:", apiError);
-          Alert.alert("Purchase completed", apiMessage);
+            "Failed to sync subscription.";
+          console.error("❌ Payment sync error:", apiError);
+          showInfo(msg);
         }
       }
     } catch (e) {
       if (!e?.userCancelled) {
-        const message = e?.message || "Purchase failed";
-         ("❌ Purchase error:", message);
-        Alert.alert("Purchase failed", message);
-      } else {
-         ("🚫 User cancelled purchase");
+        console.error("❌ Purchase error:", e?.message);
+        showError(e?.message || "Something went wrong.");
       }
     } finally {
       setPurchasing(false);
@@ -217,153 +299,158 @@ export default function Subscriptions() {
 
   const handleRestore = async () => {
     if (billingUnavailable) {
-      Alert.alert(
-        "Billing unavailable",
-        "Google Play Billing is not available on this device/emulator.",
-      );
+      showInfo("Google Play Billing is not available on this device/emulator.");
       return;
     }
-
     try {
       setPurchasing(true);
       const customerInfo = await Purchases.restorePurchases();
       const active = customerInfo.entitlements.active;
       if (Object.keys(active).length > 0) {
-        Alert.alert("Restored", "Your purchases have been restored.");
+        showSuccess("Your purchases have been restored.");
       } else {
-        Alert.alert("Nothing to restore", "No previous purchases found.");
+        showInfo("No previous purchases found.");
       }
     } catch (e) {
-      Alert.alert("Restore failed", e.message);
+      showError(e.message);
     } finally {
       setPurchasing(false);
     }
   };
 
+  // ── All plans: Free first, then RevenueCat ─────────────────────────────────
+  const allPlans = [
+    {
+      offeringId: "free_plan",
+      displayName: "Free",
+      tag: "7-DAY TRIAL",
+      period: "7 days",
+      priceString: "",
+      benefits: FREE_BENEFITS,
+    },
+    ...plans.map(({ offeringId, pkg, benefits }) => ({
+      offeringId,
+      displayName:
+        PLAN_META[offeringId]?.displayName ||
+        pkg.product.title?.split("(")[0].trim(),
+      tag: PLAN_META[offeringId]?.tag ?? null,
+      period: PLAN_META[offeringId]?.period ?? "",
+      priceString: pkg.product.priceString,
+      benefits,
+    })),
+  ];
+
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#00C896" />
-        <Text style={styles.loadingText}>Loading plans...</Text>
+        <View style={styles.loadingSpinnerWrap}>
+          <ActivityIndicator size="large" color={GREEN[600]} />
+        </View>
+        <Text style={styles.loadingText}>Loading plans…</Text>
       </View>
     );
   }
 
-  if (packages.length === 0) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>
-          {!REVENUECAT_GOOGLE_API_KEY
-            ? "RevenueCat Android API key is missing. Add expo.extra.revenueCat.androidApiKey in app.json."
-            : billingUnavailable
-              ? "Billing is unavailable on this emulator/device. Use a Play Store-enabled emulator or a real device."
-              : "No plans available right now."}
-        </Text>
-      </View>
-    );
-  }
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.pillBadge}>
-          <Text style={styles.pillText}>UPGRADE</Text>
+        <View style={styles.badgePill}>
+          <Text style={styles.badgePillText}>🌿 Go Green</Text>
         </View>
-        <Text style={styles.headline}>Choose your{"\n"}plan</Text>
-        <Text style={styles.subheadline}>
-          Unlock the full power of MY Money Sorted
-        </Text>
+        <Text style={styles.headline}>Pick your plan</Text>
+        <Text style={styles.subheadline}>Start free, upgrade anytime</Text>
       </View>
 
+      {/* Cards */}
       <View style={styles.cards}>
-        {packages.map(({ offeringId, pkg }) => {
-          const meta = PLAN_META[offeringId] ?? {
-            emoji: "✦",
-            accent: "#00C896",
-            tag: null,
-            period: "",
-          };
+        {allPlans.map(({ offeringId, displayName, tag, period, priceString, benefits }) => {
           const isSelected = selectedOfferingId === offeringId;
-
           return (
             <TouchableOpacity
               key={offeringId}
               activeOpacity={0.88}
               onPress={() => setSelectedOfferingId(offeringId)}
-              style={[
-                styles.card,
-                isSelected && { borderColor: meta.accent, borderWidth: 2 },
-              ]}
+              style={[styles.card, isSelected && styles.cardSelected]}
             >
-              <View style={styles.cardTop}>
-                <View
-                  style={[
-                    styles.emojiWrap,
-                    { backgroundColor: meta.accent + "18" },
-                  ]}
-                >
-                  <Text style={styles.emoji}>{meta.emoji}</Text>
+              {/* Selected glow border accent */}
+              {isSelected && <View style={styles.cardAccentBar} />}
+
+              {/* Top row: name + tag + radio */}
+              <View style={styles.cardHeader}>
+                <View style={styles.cardTitleRow}>
+                  <Text style={[styles.cardName, isSelected && styles.cardNameSelected]}>
+                    {displayName}
+                  </Text>
+                  {tag && (
+                    <View style={[styles.tag, isSelected && styles.tagSelected]}>
+                      <Text style={[styles.tagText, isSelected && styles.tagTextSelected]}>
+                        {tag}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-                <View style={styles.cardTopRight}>
-                  {meta.tag && (
-                    <View
-                      style={[styles.tag, { backgroundColor: meta.accent }]}
-                    >
-                      <Text style={styles.tagText}>{meta.tag}</Text>
-                    </View>
-                  )}
-                  {isSelected && (
-                    <View
-                      style={[
-                        styles.checkCircle,
-                        { backgroundColor: meta.accent },
-                      ]}
-                    >
-                      <Text style={styles.checkMark}>✓</Text>
-                    </View>
-                  )}
+                <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+                  {isSelected && <View style={styles.radioInner} />}
                 </View>
               </View>
 
-              <Text style={styles.cardTitle}>
-                {meta.displayName || pkg.product.title?.split("(")[0].trim()}
-              </Text>
+              {/* Price */}
               <View style={styles.priceRow}>
-                <Text style={[styles.price, { color: meta.accent }]}>
-                  {pkg.product.priceString}
+                <Text style={[styles.price, isSelected && styles.priceSelected]}>
+                  {priceString}
                 </Text>
-                <Text style={styles.period}> / {meta.period}</Text>
+                <Text style={styles.period}> {period}</Text>
               </View>
+
+              {/* Benefits */}
+              {benefits.length > 0 && (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.benefitList}>
+                    {benefits.map((benefit, i) => (
+                      <View key={i} style={styles.benefitRow}>
+                        <View style={[styles.checkIcon, isSelected && styles.checkIconSelected]}>
+                          <Text style={[styles.checkMark, isSelected && styles.checkMarkSelected]}>
+                            ✓
+                          </Text>
+                        </View>
+                        <Text style={[styles.benefitText, isSelected && styles.benefitTextSelected]}>
+                          {benefit}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
             </TouchableOpacity>
           );
         })}
       </View>
 
+      {/* CTA */}
       <TouchableOpacity
-        style={[
-          styles.cta,
-          (!selectedOfferingId || purchasing || billingUnavailable) &&
-          styles.ctaDisabled,
-        ]}
-        disabled={!selectedOfferingId || purchasing || billingUnavailable}
+        style={[styles.cta, purchasing && styles.ctaDisabled]}
+        disabled={purchasing}
         onPress={handlePurchase}
         activeOpacity={0.85}
       >
         {purchasing ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text
-            style={[styles.ctaText, !selectedOfferingId && styles.ctaTextMuted]}
-          >
-            {selectedOfferingId ? "Continue" : "Select a plan"}
+          <Text style={styles.ctaText}>
+            {selectedOfferingId === "free_plan" ? "Start for free" : "Continue"}
           </Text>
         )}
       </TouchableOpacity>
 
+      {/* Restore */}
       <TouchableOpacity
         style={styles.restoreBtn}
         onPress={handleRestore}
@@ -373,126 +460,235 @@ export default function Subscriptions() {
       </TouchableOpacity>
 
       <Text style={styles.legalText}>
-        Subscriptions auto-renew unless cancelled. Cancel anytime.
+        Subscriptions auto-renew unless cancelled. Cancel anytime in Play Store settings.
       </Text>
+
+      {/* Toast must be rendered at the root level of your app, but if
+          your app doesn't already include it, you can place it here */}
+      <Toast />
     </ScrollView>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F7F7" },
-  content: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 48 },
+  container: { flex: 1, backgroundColor: GREEN[50] },
+  content: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 48 },
+
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F7F7F7",
-    gap: 14,
+    backgroundColor: GREEN[50],
+    gap: 16,
   },
-  loadingText: { color: "#999", fontSize: 14, fontWeight: "500" },
-  errorText: { color: "#aaa", fontSize: 14 },
-  header: { marginBottom: 36 },
-  pillBadge: {
+  loadingSpinnerWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: GREEN[100],
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: { color: GREEN[700], fontSize: 14, fontWeight: "500" },
+
+  // Header
+  header: { marginBottom: 32 },
+  badgePill: {
     alignSelf: "flex-start",
-    backgroundColor: "#EFEFEF",
+    backgroundColor: GREEN[100],
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 5,
-    marginBottom: 16,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: GREEN[200],
   },
-  pillText: {
-    color: "#999",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
+  badgePillText: { fontSize: 12, fontWeight: "700", color: GREEN[700], letterSpacing: 0.3 },
   headline: {
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: "800",
-    color: "#111",
-    lineHeight: 46,
-    marginBottom: 10,
-    letterSpacing: -1,
+    color: GREEN[900],
+    letterSpacing: -0.5,
+    marginBottom: 6,
   },
-  subheadline: { fontSize: 16, color: "#999", fontWeight: "400" },
-  cards: { gap: 16, marginBottom: 32 },
+  subheadline: { fontSize: 15, color: GREEN[700] },
+
+  // Cards
+  cards: { gap: 14, marginBottom: 28 },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 22,
-    borderWidth: 1,
-    borderColor: "#E8E8E8",
-    shadowColor: "#000",
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: "#E5F0EB",
+    overflow: "hidden",
+    shadowColor: GREEN[800],
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
-  cardTop: {
+  cardSelected: {
+    borderColor: GREEN[500],
+    backgroundColor: "#fff",
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+
+  // Green left accent bar on selected card
+  cardAccentBar: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: GREEN[500],
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 18,
+  },
+
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 8,
+    paddingLeft: 8, // compensate for accent bar
   },
-  cardTopRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  emojiWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: "center",
+  cardTitleRow: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+    flex: 1,
   },
-  emoji: { fontSize: 22 },
-  tag: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  tagText: { color: "#fff", fontSize: 9, fontWeight: "800", letterSpacing: 1 },
-  checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkMark: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  cardTitle: {
-    fontSize: 22,
+  cardName: {
+    fontSize: 17,
     fontWeight: "700",
-    color: "#111",
-    marginBottom: 6,
-    letterSpacing: -0.3,
+    color: "#374151",
+    letterSpacing: -0.2,
   },
-  priceRow: { flexDirection: "row", alignItems: "baseline" },
-  price: { fontSize: 30, fontWeight: "800", letterSpacing: -0.5 },
-  period: { fontSize: 14, color: "#bbb", fontWeight: "500" },
-  cta: {
-    backgroundColor: "#00C896",
-    borderRadius: 16,
-    paddingVertical: 18,
+  cardNameSelected: { color: GREEN[800] },
+
+  // Tag
+  tag: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  tagSelected: { backgroundColor: GREEN[600] },
+  tagText: { fontSize: 9, fontWeight: "800", color: "#9CA3AF", letterSpacing: 0.8 },
+  tagTextSelected: { color: "#fff" },
+
+  // Radio
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+  },
+  radioOuterSelected: { borderColor: GREEN[500] },
+  radioInner: {
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
+    backgroundColor: GREEN[500],
+  },
+
+  // Price
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: 4,
+    paddingLeft: 8,
+  },
+  price: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#1F2937",
+    letterSpacing: -0.5,
+  },
+  priceSelected: { color: GREEN[700] },
+  period: { fontSize: 13, color: "#9CA3AF", fontWeight: "500" },
+
+  // Divider
+  divider: {
+    height: 1,
+    backgroundColor: GREEN[100],
+    marginTop: 14,
+    marginBottom: 14,
+    marginLeft: 8,
+  },
+
+  // Benefits
+  benefitList: { gap: 10, paddingLeft: 8 },
+  benefitRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  checkIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  checkIconSelected: { backgroundColor: GREEN[500] },
+  checkMark: { fontSize: 10, fontWeight: "900", color: "#9CA3AF" },
+  checkMarkSelected: { color: "#fff" },
+  benefitText: {
+    fontSize: 13,
+    color: "#6B7280",
+    lineHeight: 20,
+    flex: 1,
+  },
+  benefitTextSelected: { color: GREEN[900] },
+
+  // CTA
+  cta: {
+    backgroundColor: GREEN[600],
+    borderRadius: 16,
+    paddingVertical: 17,
+    alignItems: "center",
+    marginBottom: 14,
     minHeight: 56,
     justifyContent: "center",
+    shadowColor: GREEN[700],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  ctaDisabled: { backgroundColor: "#E8E8E8" },
+  ctaDisabled: { opacity: 0.45 },
   ctaText: {
     fontSize: 16,
     fontWeight: "700",
     color: "#fff",
     letterSpacing: 0.3,
   },
-  ctaTextMuted: { color: "#bbb" },
-  restoreBtn: { alignItems: "center", paddingVertical: 12, marginBottom: 16 },
+
+  // Restore
+  restoreBtn: { alignItems: "center", paddingVertical: 10, marginBottom: 14 },
   restoreText: {
-    color: "#bbb",
+    color: GREEN[600],
     fontSize: 13,
-    fontWeight: "500",
     textDecorationLine: "underline",
+    fontWeight: "500",
   },
+
+  // Legal
   legalText: {
     textAlign: "center",
     fontSize: 11,
-    color: "#ccc",
+    color: "#9CA3AF",
     lineHeight: 16,
   },
 });
