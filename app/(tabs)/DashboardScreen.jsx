@@ -15,6 +15,8 @@ import * as SecureStore from "expo-secure-store";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
+import { useSelector } from "react-redux";
+import { getCurrencyCode as getStoredCurrencyCode } from "../../utils/secureStore";
 
 const currencySymbols = {
   usd: "$",
@@ -26,6 +28,8 @@ const currencySymbols = {
 
 const DashboardScreen = () => {
   const { tab } = useLocalSearchParams();
+  const reduxCurrencyCode = useSelector((state) => state?.user?.currencyCode);
+  const [storedCurrencyCode, setStoredCurrencyCode] = useState(null);
 
   // --- STATE ---
   const [type, setType] = useState("expenses");
@@ -60,7 +64,22 @@ const DashboardScreen = () => {
       { refetchOnMountOrArgChange: true }
     );
 
-  const currency = specificTransactionRecent?.result?.[0]?.currency;
+  const currencyFromApi = specificTransactionRecent?.result?.[0]?.currency;
+
+  useEffect(() => {
+    const loadCurrency = async () => {
+      const stored = await getStoredCurrencyCode();
+      setStoredCurrencyCode(stored);
+    };
+    loadCurrency();
+  }, []);
+
+  const activeCurrencyCode = (
+    currencyFromApi ||
+    reduxCurrencyCode ||
+    storedCurrencyCode ||
+    "usd"
+  ).toString().toLowerCase();
 
   // --- FETCH SAVED CATEGORIES + REFETCH BOTH ON FOCUS ---
   useFocusEffect(
@@ -86,7 +105,10 @@ const DashboardScreen = () => {
   // --- TRANSFORM DATA ---
   const transformedSpecificTransactionRecent =
     specificTransactionRecent?.result?.map((tx) => {
-      const symbol = currencySymbols[tx.currency] || "$";
+      const txCurrencyCode = (tx?.currency || activeCurrencyCode)
+        .toString()
+        .toLowerCase();
+      const symbol = currencySymbols[txCurrencyCode] || "$";
       return {
         transactionId: tx._id,
         name: tx.category?.name || "Unknown",
@@ -103,7 +125,7 @@ const DashboardScreen = () => {
     allCategoriesWithSum?.result
       .filter((cat) => cat.type === "expenses")
       .map((cat) => {
-        const symbol = currencySymbols[currency] || "$";
+        const symbol = currencySymbols[activeCurrencyCode] || "$";
         return {
           transactionId: cat._id,
           name: cat.name,
@@ -120,7 +142,7 @@ const DashboardScreen = () => {
     allCategoriesWithSum?.result
       .filter((cat) => cat.type === "income")
       .map((cat) => {
-        const symbol = currencySymbols[currency] || "$";
+        const symbol = currencySymbols[activeCurrencyCode] || "$";
         return {
           transactionId: cat._id,
           name: cat.name,

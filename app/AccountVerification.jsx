@@ -140,7 +140,7 @@ const AccountVerification = () => {
         const token = signInResponse?.data?.accessToken;
         if (token) {
           dispatch(setToken(token));
-          router.replace("/LoginScreen");
+          router.replace({ pathname: "/Currency", params: { next: "/LoginScreen" } });
         } else {
           Toast.show({
             type: "error",

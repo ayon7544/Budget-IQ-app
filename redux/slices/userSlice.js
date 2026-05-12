@@ -67,6 +67,7 @@ const userSlice = createSlice({
     email: null,
     contactNo: null,
     imageUrl: null,
+    currencyCode: null,
     status: "idle",
     error: null,
   },
@@ -76,12 +77,21 @@ const userSlice = createSlice({
       state.email = action.payload.email;
       state.contactNo = action.payload.contactNo;
       state.imageUrl = action.payload.imageUrl;
+      if (typeof action.payload.currencyCode === "string") {
+        state.currencyCode = action.payload.currencyCode;
+      }
+    },
+    setCurrencyCode: (state, action) => {
+      state.currencyCode = action.payload;
     },
     clearUserData: (state) => {
       state.fullName = null;
       state.email = null;
       state.contactNo = null;
       state.imageUrl = null;
+    },
+    clearCurrencyCode: (state) => {
+      state.currencyCode = null;
     },
   },
   extraReducers: (builder) => {
@@ -119,5 +129,10 @@ const userSlice = createSlice({
   },
 });
 
-export const { setUserData, clearUserData } = userSlice.actions;
+export const {
+  setUserData,
+  setCurrencyCode,
+  clearUserData,
+  clearCurrencyCode,
+} = userSlice.actions;
 export default userSlice.reducer;

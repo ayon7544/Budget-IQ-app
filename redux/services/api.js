@@ -126,8 +126,13 @@ export const api = createApi({
         method: "GET",
       }),
       transformResponse: (response) => {
-        // Map through the result and prepend the server URL to categoryImage
-        const resultWithFullImage = response.result.map((tx) => ({
+        // Some environments return { result: [...] }, others return { data: { result: [...] } }
+        const rawResult =
+          (Array.isArray(response?.result) && response.result) ||
+          (Array.isArray(response?.data?.result) && response.data.result) ||
+          [];
+
+        const resultWithFullImage = rawResult.map((tx) => ({
           ...tx,
           category: {
             ...tx.category,
@@ -136,7 +141,9 @@ export const api = createApi({
               : null,
           },
         }));
-        return { ...response, result: resultWithFullImage };
+
+        // Preserve original shape as much as possible, but guarantee `result`
+        return { ...(response || {}), result: resultWithFullImage };
       },
     }),
 

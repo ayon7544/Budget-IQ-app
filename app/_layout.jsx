@@ -63,7 +63,6 @@ export default function RootLayout() {
           options={{
             ...defaultHeader,
             title: "Currency",
-            headerBackVisible: false,
             headerTitleStyle: { fontWeight: "700" },
           }}
         />

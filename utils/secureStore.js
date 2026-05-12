@@ -67,3 +67,30 @@ export const getSubscriptionViewTime = async () => {
     return null;
   }
 };
+
+// ===================== CURRENCY =====================
+
+const CURRENCY_KEY = "user_currency_code";
+
+export const setCurrencyCode = async (currencyCode) => {
+  try {
+    if (typeof currencyCode !== "string" || currencyCode.trim().length === 0) {
+      return;
+    }
+    await SecureStore.setItemAsync(CURRENCY_KEY, currencyCode.trim().toLowerCase());
+  } catch (e) {}
+};
+
+export const getCurrencyCode = async () => {
+  try {
+    return await SecureStore.getItemAsync(CURRENCY_KEY);
+  } catch (e) {
+    return null;
+  }
+};
+
+export const deleteCurrencyCode = async () => {
+  try {
+    await SecureStore.deleteItemAsync(CURRENCY_KEY);
+  } catch (e) {}
+};
