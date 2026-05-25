@@ -1,16 +1,52 @@
 import { useRouter } from "expo-router";
 import {
-  Image,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  StatusBar,
+  useWindowDimensions,
 } from "react-native";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { Colors } from "../Constants/Colors";
+import { loadTokenFromStorage } from "../redux/slices/authSlice";
+import { getToken } from "../utils/secureStore";
+import OnboardingArt from "../assets/images/new.svg";
 
 const InitialScreen = () => {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const dispatch = useDispatch();
+  const [token, setToken] = useState(null);
+  const onboardingWidth = Math.min(width - 32, 700);
+  const onboardingHeight = Math.round((onboardingWidth * 370) / 242);
+
+  useEffect(() => {
+    const loadStoredToken = async () => {
+      const storedToken = await getToken();
+
+      if (storedToken) {
+        dispatch(loadTokenFromStorage(storedToken));
+        setToken(storedToken);
+      }
+    };
+
+    loadStoredToken();
+  }, [dispatch]);
+
+  const handleNext = async () => {
+    const storedToken = token ?? (await getToken());
+
+    if (storedToken) {
+      dispatch(loadTokenFromStorage(storedToken));
+      router.replace("/(tabs)");
+      return;
+    }
+
+    router.replace("/LoginScreen");
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar
@@ -19,31 +55,16 @@ const InitialScreen = () => {
         translucent={true} // Lets content show behind the bar
       />
 
-      <Image
-        source={require("../assets/images/trust.png")}
-        style={styles.image}
-        resizeMode="contain"
-      />
+      <View style={styles.imageWrap}>
+        <OnboardingArt
+          width={onboardingWidth}
+          height={onboardingHeight}
+        />
+      </View>
 
-      <Text style={styles.heading}>
-        Your Trusted Financial Advisor — Always Within Reach
-      </Text>
-
-      <Text style={styles.description}>
-        Connect instantly with savings experts — right from your phone.
-      </Text>
-
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push("SecondScreen")}
-      >
+      <TouchableOpacity style={styles.button} onPress={handleNext}>
         <Text style={styles.buttonText}>Next</Text>
       </TouchableOpacity>
-
-      <View style={styles.pagination}>
-        <View style={[styles.dot, styles.activeDot]} />
-        <View style={styles.dot} />
-      </View>
     </View>
   );
 };
@@ -55,24 +76,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     padding: 24,
-    justifyContent: "space-evenly",
+    justifyContent: "center",
     alignItems: "center",
   },
-  image: {
+  imageWrap: {
     width: "100%",
-    height: 250,
-  },
-  heading: {
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-    color: "#000",
-  },
-  description: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginTop: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
   },
   button: {
     backgroundColor: Colors.primary,
@@ -80,26 +91,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     borderRadius: 8,
     width: "100%",
-    marginTop: 20,
+    maxWidth: 420,
+    marginTop: 0,
   },
   buttonText: {
     color: "#fff",
     fontSize: 16,
     textAlign: "center",
     fontWeight: "600",
-  },
-  pagination: {
-    flexDirection: "row",
-    marginTop: 20,
-    gap: 8,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#ccc",
-  },
-  activeDot: {
-    backgroundColor: "#00C46A",
   },
 });

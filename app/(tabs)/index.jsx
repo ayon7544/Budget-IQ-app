@@ -149,88 +149,91 @@ useEffect(() => {
         style={styles.askButton}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={styles.askButtonText}>ASK AI BUDDY</Text>
+        <Text style={styles.askButtonText}>ASK IQ Buddy</Text>
       </TouchableOpacity>
 
       <Modal
         animationType="fade"
         transparent={true}
+        presentationStyle="overFullScreen"
         statusBarTranslucent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <View style={styles.modalOverlay}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={Keyboard.dismiss} />
-            <View style={styles.popupContainer}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>AI Buddy</Text>
-                <TouchableOpacity onPress={() => setModalVisible(false)}>
-                  <Text style={styles.closeText}>✕</Text>
-                </TouchableOpacity>
-              </View>
+        <View style={styles.backdrop}>
+          <KeyboardAvoidingView
+            style={styles.modalRoot}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
+            <View style={styles.modalOverlay}>
+              <Pressable style={StyleSheet.absoluteFill} onPress={Keyboard.dismiss} />
+              <View style={styles.popupContainer}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>IQ Buddy</Text>
+                  <TouchableOpacity onPress={() => setModalVisible(false)}>
+                    <Text style={styles.closeText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
 
-              <FlatList
-                ref={scrollViewRef}
-                style={styles.chatContainer}
-                contentContainerStyle={styles.chatContent}
-                data={
-                  isTyping
-                    ? [...messages, { text: "Bot is typing...", sender: "bot" }]
-                    : messages
-                }
-                keyExtractor={(item, index) => `${item.sender}-${index}`}
-                keyboardShouldPersistTaps="handled"
-                nestedScrollEnabled
-                onContentSizeChange={() =>
-                  scrollViewRef.current?.scrollToEnd({ animated: true })
-                }
-                renderItem={({ item: msg }) => (
-                  <View
-                    style={[
-                      styles.messageBubble,
-                      msg.sender === "user"
-                        ? styles.userMessage
-                        : styles.botMessage,
-                    ]}
-                  >
-                    <Text style={styles.messageText}>{msg.text}</Text>
-                  </View>
-                )}
-              />
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                  placeholder="Message AI Buddy"
-                  style={styles.input}
-                  value={inputText}
-                  onChangeText={setInputText}
-                />
-                <TouchableOpacity
-                  onPress={handleSend}
-                  disabled={inputText.trim() === "" || isTyping}
-                  style={styles.sendButton}
-                >
-                  {isTyping ? (
-                    <ActivityIndicator size="small" color="#28a745" />
-                  ) : (
-                    <Text
+                <FlatList
+                  ref={scrollViewRef}
+                  style={styles.chatContainer}
+                  contentContainerStyle={styles.chatContent}
+                  data={
+                    isTyping
+                      ? [...messages, { text: "Bot is typing...", sender: "bot" }]
+                      : messages
+                  }
+                  keyExtractor={(item, index) => `${item.sender}-${index}`}
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                  onContentSizeChange={() =>
+                    scrollViewRef.current?.scrollToEnd({ animated: true })
+                  }
+                  renderItem={({ item: msg }) => (
+                    <View
                       style={[
-                        styles.sendIcon,
-                        inputText.trim() === "" && { opacity: 0.3 },
+                        styles.messageBubble,
+                        msg.sender === "user"
+                          ? styles.userMessage
+                          : styles.botMessage,
                       ]}
                     >
-                      ➤
-                    </Text>
+                      <Text style={styles.messageText}>{msg.text}</Text>
+                    </View>
                   )}
-                </TouchableOpacity>
+                />
+
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    placeholder="Message IQ Buddy"
+                    style={styles.input}
+                    value={inputText}
+                    onChangeText={setInputText}
+                  />
+                  <TouchableOpacity
+                    onPress={handleSend}
+                    disabled={inputText.trim() === "" || isTyping}
+                    style={styles.sendButton}
+                  >
+                    {isTyping ? (
+                      <ActivityIndicator size="small" color="#28a745" />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.sendIcon,
+                          inputText.trim() === "" && { opacity: 0.3 },
+                        ]}
+                      >
+                        ➤
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -264,9 +267,15 @@ const styles = StyleSheet.create({
     marginLeft: "60%",
   },
   askButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  modalOverlay: {
+  backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  modalRoot: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
     justifyContent: "center",
     paddingHorizontal: 20,
   },

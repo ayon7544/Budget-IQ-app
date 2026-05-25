@@ -32,7 +32,7 @@ const TabLayout = () => {
         options={{
           title: "Home",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="home-outline" size={22} color={color} />
+            <Ionicons name="home-outline" size={24} color={color} />
           ),
         }}
       />
@@ -41,7 +41,7 @@ const TabLayout = () => {
         options={{
           title: "Dashboard",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="grid-outline" size={22} color={color} />
+            <Ionicons name="grid-outline" size={24} color={color} />
           ),
         }}
       />
@@ -50,7 +50,7 @@ const TabLayout = () => {
         options={{
           title: "Setting",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="settings-outline" size={22} color={color} />
+            <Ionicons name="settings-outline" size={24} color={color} />
           ),
         }}
       />
