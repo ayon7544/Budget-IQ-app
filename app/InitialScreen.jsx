@@ -19,7 +19,7 @@ const InitialScreen = () => {
   const { width } = useWindowDimensions();
   const dispatch = useDispatch();
   const [token, setToken] = useState(null);
-  const onboardingWidth = Math.min(width - 32, 700);
+  const onboardingWidth = Math.min(width - 20, 760);
   const onboardingHeight = Math.round((onboardingWidth * 370) / 242);
 
   useEffect(() => {
