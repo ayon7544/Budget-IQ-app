@@ -54,7 +54,7 @@ const IncomeCategories = () => {
     isLoading,
     isError,
   } = useGetAllCategoriesQuery("income");
-
+console.log("Income Categories Data:", incomeCategories); // Debugging line
   // Load saved selections from SecureStore after API loads
   useEffect(() => {
     const loadSelections = async () => {
